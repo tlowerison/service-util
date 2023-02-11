@@ -19,15 +19,9 @@ lazy_static! {
     static ref EMPTY_HEADER_MAP: HeaderMap = HeaderMap::default();
 }
 
-pub trait ClientError:
-    Debug + Display + From<BaseClientError> + From<Response<Vec<u8>>> + Send + Sync
-{
-}
+pub trait ClientError: Debug + Display + From<BaseClientError> + From<Response<Vec<u8>>> + Send + Sync {}
 
-impl<E> ClientError for E where
-    E: Debug + Display + From<BaseClientError> + From<Response<Vec<u8>>> + Send + Sync
-{
-}
+impl<E> ClientError for E where E: Debug + Display + From<BaseClientError> + From<Response<Vec<u8>>> + Send + Sync {}
 
 #[derive(Debug, Error)]
 pub enum BaseClientError {
@@ -265,28 +259,27 @@ impl<C: Client, E: Endpoint + EndpointSerializedParams<C>> EndpointUri<C> for E 
             return Ok(uri);
         }
 
-        let path_and_query: Option<PathAndQuery> =
-            if let Some(path_and_query) = uri.path_and_query() {
-                if let Some(query) = path_and_query.query() {
-                    Some(
-                        concat_string!(path_and_query.path(), "?", query, "&", serialized_params)
-                            .parse()
-                            .map_err(BaseClientError::from)?,
-                    )
-                } else {
-                    Some(
-                        concat_string!(path_and_query.path(), "?", serialized_params)
-                            .parse()
-                            .map_err(BaseClientError::from)?,
-                    )
-                }
-            } else {
+        let path_and_query: Option<PathAndQuery> = if let Some(path_and_query) = uri.path_and_query() {
+            if let Some(query) = path_and_query.query() {
                 Some(
-                    concat_string!("?", serialized_params)
+                    concat_string!(path_and_query.path(), "?", query, "&", serialized_params)
                         .parse()
                         .map_err(BaseClientError::from)?,
                 )
-            };
+            } else {
+                Some(
+                    concat_string!(path_and_query.path(), "?", serialized_params)
+                        .parse()
+                        .map_err(BaseClientError::from)?,
+                )
+            }
+        } else {
+            Some(
+                concat_string!("?", serialized_params)
+                    .parse()
+                    .map_err(BaseClientError::from)?,
+            )
+        };
 
         if let Some(path_and_query) = path_and_query {
             let mut uri_parts = uri.into_parts();
@@ -300,35 +293,33 @@ impl<C: Client, E: Endpoint + EndpointSerializedParams<C>> EndpointUri<C> for E 
 
 impl<C: Client + ClientBaseUri, E: Endpoint + EndpointSerializedParams<C>> EndpointUri<C> for E {
     default fn uri(&self, client: &C) -> Result<Uri, C::Error> {
-        let uri = Uri::try_from(concat_string!(client.base_uri(), self.path()))
-            .map_err(BaseClientError::from)?;
+        let uri = Uri::try_from(concat_string!(client.base_uri(), self.path())).map_err(BaseClientError::from)?;
         let serialized_params = self.serialized_params()?;
         if serialized_params.as_ref() == "" {
             return Ok(uri);
         }
 
-        let path_and_query: Option<PathAndQuery> =
-            if let Some(path_and_query) = uri.path_and_query() {
-                if let Some(query) = path_and_query.query() {
-                    Some(
-                        concat_string!(path_and_query.path(), "?", query, "&", serialized_params)
-                            .parse()
-                            .map_err(BaseClientError::from)?,
-                    )
-                } else {
-                    Some(
-                        concat_string!(path_and_query.path(), "?", serialized_params)
-                            .parse()
-                            .map_err(BaseClientError::from)?,
-                    )
-                }
-            } else {
+        let path_and_query: Option<PathAndQuery> = if let Some(path_and_query) = uri.path_and_query() {
+            if let Some(query) = path_and_query.query() {
                 Some(
-                    concat_string!("?", serialized_params)
+                    concat_string!(path_and_query.path(), "?", query, "&", serialized_params)
                         .parse()
                         .map_err(BaseClientError::from)?,
                 )
-            };
+            } else {
+                Some(
+                    concat_string!(path_and_query.path(), "?", serialized_params)
+                        .parse()
+                        .map_err(BaseClientError::from)?,
+                )
+            }
+        } else {
+            Some(
+                concat_string!("?", serialized_params)
+                    .parse()
+                    .map_err(BaseClientError::from)?,
+            )
+        };
 
         if let Some(path_and_query) = path_and_query {
             let mut uri_parts = uri.into_parts();
@@ -416,12 +407,12 @@ where
             return Err(C::Error::from(raw_response::<C>(response).await?));
         }
 
-        Ok(serde_json::from_slice::<E::Response<T>>(
-            raw_response::<C>(response).await?.into_body().as_slice(),
+        Ok(
+            serde_json::from_slice::<E::Response<T>>(raw_response::<C>(response).await?.into_body().as_slice())
+                .map_err(BaseClientError::ResponseBodyDeserialization)
+                .map_err(C::Error::from)?
+                .unwrap_response(),
         )
-        .map_err(BaseClientError::ResponseBodyDeserialization)
-        .map_err(C::Error::from)?
-        .unwrap_response())
     }
 }
 
@@ -468,12 +459,10 @@ where
         }
 
         Ok(Some(
-            serde_json::from_slice::<E::Response<T>>(
-                raw_response::<C>(response).await?.into_body().as_slice(),
-            )
-            .map_err(BaseClientError::ResponseBodyDeserialization)
-            .map_err(C::Error::from)?
-            .unwrap_response(),
+            serde_json::from_slice::<E::Response<T>>(raw_response::<C>(response).await?.into_body().as_slice())
+                .map_err(BaseClientError::ResponseBodyDeserialization)
+                .map_err(C::Error::from)?
+                .unwrap_response(),
         ))
     }
 }
@@ -579,10 +568,7 @@ pub struct Paged<E> {
 
 impl<E> Paged<E> {
     pub fn new(pagination: Pagination, endpoint: E) -> Self {
-        Paged {
-            endpoint,
-            pagination,
-        }
+        Paged { endpoint, pagination }
     }
 
     pub fn all(endpoint: E) -> Self {
@@ -643,9 +629,7 @@ where
                 None => break,
             };
 
-            let request = self
-                .endpoint
-                .request(client, &uri, &headers, Some(next_page))?;
+            let request = self.endpoint.request(client, &uri, &headers, Some(next_page))?;
 
             let response = raw_response::<C>(client.rest(request).await?).await?;
 
@@ -654,11 +638,10 @@ where
                 return Err(C::Error::from(response));
             }
 
-            let mut results =
-                serde_json::from_slice::<E::Response<Vec<T>>>(response.body().as_slice())
-                    .map_err(BaseClientError::ResponseBodyDeserialization)
-                    .map_err(C::Error::from)?
-                    .unwrap_response();
+            let mut results = serde_json::from_slice::<E::Response<Vec<T>>>(response.body().as_slice())
+                .map_err(BaseClientError::ResponseBodyDeserialization)
+                .map_err(C::Error::from)?
+                .unwrap_response();
 
             all_results.append(&mut results);
 
@@ -703,9 +686,7 @@ where
     where
         D: Deserializer<'de>,
     {
-        Ok(DefaultResponse(<T as Deserialize>::deserialize(
-            deserializer,
-        )?))
+        Ok(DefaultResponse(<T as Deserialize>::deserialize(deserializer)?))
     }
 }
 

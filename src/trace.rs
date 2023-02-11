@@ -44,8 +44,7 @@ pub fn install_tracing(should_enable_telemetry: bool) -> Result<(), anyhow::Erro
             )
             .with(ErrorLayer::default());
 
-        tracing::subscriber::set_global_default(registry)
-            .expect("failed to set tracing subscriber");
+        tracing::subscriber::set_global_default(registry).expect("failed to set tracing subscriber");
     }
 
     info!("set global default tracing subscriber");
@@ -95,11 +94,7 @@ fn install_jaeger_enabled_tracing() -> Result<(), anyhow::Error> {
 
 pub fn set_trace_parent(req: &Request<hyper::Body>, span: Span) -> Span {
     let propagator = TraceContextPropagator::new();
-    if let Some(traceparent) = req
-        .headers()
-        .get(&TRACEPARENT)
-        .and_then(|x| x.to_str().ok())
-    {
+    if let Some(traceparent) = req.headers().get(&TRACEPARENT).and_then(|x| x.to_str().ok()) {
         // Propagator::extract only works with HashMap<String, String>
         let mut headers = match req.headers().get(&TRACESTATE).and_then(|x| x.to_str().ok()) {
             Some(tracestate) => {

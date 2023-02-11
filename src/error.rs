@@ -18,15 +18,11 @@ pub struct Error {
 
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        let Error {
-            status_code, msg, ..
-        } = &self;
+        let Error { status_code, msg, .. } = &self;
 
         #[cfg(feature = "log_error")]
         {
-            let Error {
-                details, backtrace, ..
-            } = &self;
+            let Error { details, backtrace, .. } = &self;
             let mut log_err_msg = format!(" - status_code: {status_code}");
             if let Some(msg) = msg.as_ref() {
                 log_err_msg = format!("{log_err_msg}\n - msg: {msg}");
@@ -35,11 +31,7 @@ impl Display for Error {
                 log_err_msg = format!("{log_err_msg}\n - details: {details}");
             }
             if let Some(backtrace) = backtrace.as_ref() {
-                let backtrace = backtrace
-                    .iter()
-                    .map(|l| l.to_string())
-                    .collect::<Vec<_>>()
-                    .join("\n");
+                let backtrace = backtrace.iter().map(|l| l.to_string()).collect::<Vec<_>>().join("\n");
                 log_err_msg = format!("{log_err_msg}\n - backtrace:\n{backtrace}");
             }
 
@@ -191,7 +183,7 @@ impl From<(StatusCode, String)> for Error {
     }
 }
 
-#[cfg(all(feature = "server", feature = "axum-core-02"))]
+#[cfg(all(feature = "server", feature = "axum-05"))]
 impl axum_05::response::IntoResponse for Error {
     fn into_response(self) -> axum_05::response::Response {
         let body = match self.msg {
@@ -206,7 +198,7 @@ impl axum_05::response::IntoResponse for Error {
     }
 }
 
-#[cfg(all(feature = "server", feature = "axum-core-03"))]
+#[cfg(all(feature = "server", feature = "axum-06"))]
 impl axum_06::response::IntoResponse for Error {
     fn into_response(self) -> axum_06::response::Response {
         let body = match self.msg {
@@ -270,9 +262,7 @@ impl From<hyper::Response<Vec<u8>>> for Error {
             unimplemented!();
         }
 
-        let details = std::str::from_utf8(response.body().as_slice())
-            .map(String::from)
-            .ok();
+        let details = std::str::from_utf8(response.body().as_slice()).map(String::from).ok();
 
         Error::init(status, None, details)
     }
@@ -298,25 +288,16 @@ mod db {
     #[derivative(Debug)]
     pub enum DbError {
         #[error("db error: application error: {0}")]
-        Application(
-            anyhow::Error,
-            #[derivative(Debug = "ignore")] Option<Box<[Location]>>,
-        ),
+        Application(anyhow::Error, #[derivative(Debug = "ignore")] Option<Box<[Location]>>),
         #[error("db error: database could not process request: {0}")]
         BadRequest(
             diesel::result::Error,
             #[derivative(Debug = "ignore")] Option<Box<[Location]>>,
         ),
         #[error("db error: bad request: {0}")]
-        CustomBadRequest(
-            anyhow::Error,
-            #[derivative(Debug = "ignore")] Option<Box<[Location]>>,
-        ),
+        CustomBadRequest(anyhow::Error, #[derivative(Debug = "ignore")] Option<Box<[Location]>>),
         #[error("invalid db state")]
-        InvalidDbState(
-            anyhow::Error,
-            #[derivative(Debug = "ignore")] Option<Box<[Location]>>,
-        ),
+        InvalidDbState(anyhow::Error, #[derivative(Debug = "ignore")] Option<Box<[Location]>>),
         #[error("db error: network error while communiciating with database: {0}")]
         Network(
             diesel::result::Error,
@@ -332,9 +313,7 @@ mod db {
             diesel::result::Error,
             #[derivative(Debug = "ignore")] Option<Box<[Location]>>,
         ),
-        #[error(
-            "db error: could not commit transaction, another concurrent has locked affected rows"
-        )]
+        #[error("db error: could not commit transaction, another concurrent has locked affected rows")]
         Stale(#[derivative(Debug = "ignore")] Option<Box<[Location]>>),
         #[error("transaction cleanup error: {0}")]
         TxCleanup(#[from] TxCleanupError),
@@ -368,12 +347,8 @@ mod db {
                 diesel::result::Error::InvalidCString(_) => DbError::BadRequest(error, backtrace()),
                 diesel::result::Error::DatabaseError(kind, _) => match kind {
                     DatabaseErrorKind::UniqueViolation => DbError::BadRequest(error, backtrace()),
-                    DatabaseErrorKind::ForeignKeyViolation => {
-                        DbError::BadRequest(error, backtrace())
-                    }
-                    DatabaseErrorKind::UnableToSendCommand => {
-                        DbError::BadRequest(error, backtrace())
-                    }
+                    DatabaseErrorKind::ForeignKeyViolation => DbError::BadRequest(error, backtrace()),
+                    DatabaseErrorKind::UnableToSendCommand => DbError::BadRequest(error, backtrace()),
                     DatabaseErrorKind::ReadOnlyTransaction => DbError::Server(error, backtrace()),
                     DatabaseErrorKind::NotNullViolation => DbError::BadRequest(error, backtrace()),
                     DatabaseErrorKind::CheckViolation => DbError::BadRequest(error, backtrace()),
@@ -384,9 +359,7 @@ mod db {
                 },
                 diesel::result::Error::NotFound => DbError::BadRequest(error, backtrace()),
                 diesel::result::Error::QueryBuilderError(_) => DbError::Server(error, backtrace()),
-                diesel::result::Error::DeserializationError(_) => {
-                    DbError::Server(error, backtrace())
-                }
+                diesel::result::Error::DeserializationError(_) => DbError::Server(error, backtrace()),
                 diesel::result::Error::SerializationError(_) => DbError::Server(error, backtrace()),
                 diesel::result::Error::AlreadyInTransaction => DbError::Server(error, backtrace()),
                 diesel::result::Error::NotInTransaction => DbError::Server(error, backtrace()),
@@ -422,28 +395,13 @@ mod db {
         fn from(err: DbError) -> Self {
             let (err, backtrace) = match err {
                 DbError::BadRequest(err, backtrace) => {
-                    return Error::init_with_backtrace(
-                        StatusCode::BAD_REQUEST,
-                        None,
-                        format!("{err}"),
-                        backtrace,
-                    )
+                    return Error::init_with_backtrace(StatusCode::BAD_REQUEST, None, format!("{err}"), backtrace)
                 }
                 DbError::CustomBadRequest(err, backtrace) => {
-                    return Error::init_with_backtrace(
-                        StatusCode::BAD_REQUEST,
-                        None,
-                        format!("{err}"),
-                        backtrace,
-                    )
+                    return Error::init_with_backtrace(StatusCode::BAD_REQUEST, None, format!("{err}"), backtrace)
                 }
                 DbError::Stale(backtrace) => {
-                    return Error::init_with_backtrace(
-                        StatusCode::SERVICE_UNAVAILABLE,
-                        None,
-                        None,
-                        backtrace,
-                    )
+                    return Error::init_with_backtrace(StatusCode::SERVICE_UNAVAILABLE, None, None, backtrace)
                 }
 
                 DbError::Application(err, backtrace) => (format!("{err}"), backtrace),
