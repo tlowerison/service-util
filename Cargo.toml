@@ -33,7 +33,7 @@ ring = { version = "0", optional = true }
 serde = { version = "1", optional = true }
 serde_json = { version = "1", optional = true }
 serde_qs = { version = "0", optional = true }
-session-util = { git = "https://github.com/tlowerison/session-util", rev = "b064a7c", features = ["account"], optional = true }
+session-util = { git = "https://github.com/tlowerison/session-util", rev = "c0fe0c6", features = ["account"], optional = true }
 tonic = { version = "0", optional = true }
 tokio = { version = "1", features = ["signal"], optional = true }
 tower = { version = "0", optional = true }
