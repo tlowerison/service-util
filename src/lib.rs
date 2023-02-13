@@ -50,7 +50,7 @@ cfg_if! {
             };
             ( $($expr:expr,)* ~ $($final_ident:ident,)* @ $ident:ident ~) => {
                 {
-                    let ($($final_ident),*) = tokio::join!($($expr),+);
+                    let ($($final_ident),*) = $crate::tokio::join!($($expr),+);
                     $crate::try_join_safe!( @ @ $($final_ident)* )
                 }
             };
