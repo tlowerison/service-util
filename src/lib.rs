@@ -40,6 +40,8 @@ cfg_if! {
         mod server;
         pub use server::*;
 
+        pub use tokio as service_util_tokio;
+
         #[macro_export]
         macro_rules! try_join_safe {
             ($($expr:expr),+ $(,)?) => { $crate::try_join_safe!($($expr,)+ ~ @ _a ~ $($expr,)+) };
@@ -50,7 +52,7 @@ cfg_if! {
             };
             ( $($expr:expr,)* ~ $($final_ident:ident,)* @ $ident:ident ~) => {
                 {
-                    let ($($final_ident),*) = $crate::tokio::join!($($expr),+);
+                    let ($($final_ident),*) = $crate::service_util_tokio::join!($($expr),+);
                     $crate::try_join_safe!( @ @ $($final_ident)* )
                 }
             };
