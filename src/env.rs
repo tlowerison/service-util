@@ -13,12 +13,38 @@ macro_rules! env {
 
         $crate::env! { @ $var $($tt)* }
     } };
+    (@ use_env $var:ident $ty:ty | $setter:expr) => {
+        $crate::service_util_paste! {
+            pub fn [<use_ $var:lower>]<'a, T: 'a, F>(f: F) -> Result<T, $crate::EnvError>
+            where
+                F: FnOnce(&$ty) -> T + 'a,
+            {
+                if [<has_set_ $var:lower>]() {
+                    let lock = [<$var _VALUE>].read().unwrap();
+                    let res = lock.as_ref().unwrap();
+                    match res {
+                        Ok(ok) => Ok(f(ok)),
+                        Err(err) => Err(err.clone()),
+                    }
+                } else {
+                    let res = $setter;
+                    let output = match &res {
+                        Ok(ok) => Ok(f(&ok)),
+                        Err(err) => Err(err.clone()),
+                    };
+                    let mut write_lock = [<$var _VALUE>].write().unwrap();
+                    *write_lock = Some(res);
+                    output
+                }
+            }
+        }
+    };
     (@ $var:ident Option<$ty:ty> $(, $($tt:tt)*)?) => { $crate::service_util_paste! {
         $crate::service_util_lazy_static! {
-            static ref [<$var _VALUE>]: std::sync::Arc<std::sync::RwLock<Option<Result<Option<$ty>, service_util::EnvError>>>> = std::sync::Arc::new(std::sync::RwLock::new(None));
+            static ref [<$var _VALUE>]: std::sync::Arc<std::sync::RwLock<Option<Result<Option<$ty>, $crate::EnvError>>>> = std::sync::Arc::new(std::sync::RwLock::new(None));
         }
 
-        pub fn [<$var:lower>]() -> Result<Option<$ty>, service_util::EnvError> {
+        pub fn [<$var:lower>]() -> Result<Option<$ty>, $crate::EnvError> {
             if [<has_set_ $var:lower>]() {
                 [<$var _VALUE>].read().unwrap().as_ref().unwrap().clone()
             } else {
@@ -29,14 +55,16 @@ macro_rules! env {
             }
         }
 
+        $crate::env! { @ use_env $var Option<$ty> | $crate::service_util_opt_env($var) }
+
         $($crate::env! { $($tt)* })?
     } };
     (@ $var:ident $ty:ty $(, $($tt:tt)*)?) => { $crate::service_util_paste! {
         $crate::service_util_lazy_static! {
-            static ref [<$var _VALUE>]: std::sync::Arc<std::sync::RwLock<Option<Result<$ty, service_util::EnvError>>>> = std::sync::Arc::new(std::sync::RwLock::new(None));
+            static ref [<$var _VALUE>]: std::sync::Arc<std::sync::RwLock<Option<Result<$ty, $crate::EnvError>>>> = std::sync::Arc::new(std::sync::RwLock::new(None));
         }
 
-        pub fn [<$var:lower>]() -> Result<$ty, service_util::EnvError> {
+        pub fn [<$var:lower>]() -> Result<$ty, $crate::EnvError> {
             if [<has_set_ $var:lower>]() {
                 [<$var _VALUE>].read().unwrap().as_ref().unwrap().clone()
             } else {
@@ -47,14 +75,16 @@ macro_rules! env {
             }
         }
 
+        $crate::env! { @ use_env $var $ty | $crate::service_util_env($var) }
+
         $($crate::env! { $($tt)* })?
     } };
     (@ $var:ident $ty:ty = $expr:expr $(, $($tt:tt)*)?) => { $crate::service_util_paste! {
         $crate::service_util_lazy_static! {
-            static ref [<$var _VALUE>]: std::sync::Arc<std::sync::RwLock<Option<Result<$ty, service_util::EnvError>>>> = std::sync::Arc::new(std::sync::RwLock::new(None));
+            static ref [<$var _VALUE>]: std::sync::Arc<std::sync::RwLock<Option<Result<$ty, $crate::EnvError>>>> = std::sync::Arc::new(std::sync::RwLock::new(None));
         }
 
-        pub fn [<$var:lower>]() -> Result<$ty, service_util::EnvError> {
+        pub fn [<$var:lower>]() -> Result<$ty, $crate::EnvError> {
             if [<has_set_ $var:lower>]() {
                 [<$var _VALUE>].read().unwrap().as_ref().unwrap().clone()
             } else {
@@ -65,14 +95,16 @@ macro_rules! env {
             }
         }
 
+        $crate::env! { @ use_env $var $ty | $crate::service_util_env($var) }
+
         $($crate::env! { $($tt)* })?
     } };
     (@ $var:ident Option<$ty:ty> | $map_fn:path $(, $($tt:tt)*)?) => { $crate::service_util_paste! {
         $crate::service_util_lazy_static! {
-            static ref [<$var _VALUE>]: std::sync::Arc<std::sync::RwLock<Option<Result<Option<$ty>, service_util::EnvError>>>> = std::sync::Arc::new(std::sync::RwLock::new(None));
+            static ref [<$var _VALUE>]: std::sync::Arc<std::sync::RwLock<Option<Result<Option<$ty>, $crate::EnvError>>>> = std::sync::Arc::new(std::sync::RwLock::new(None));
         }
 
-        pub fn [<$var:lower>]() -> Result<Option<$ty>, service_util::EnvError> {
+        pub fn [<$var:lower>]() -> Result<Option<$ty>, $crate::EnvError> {
             if [<has_set_ $var:lower>]() {
                 [<$var _VALUE>].read().unwrap().as_ref().unwrap().clone()
             } else {
@@ -83,14 +115,16 @@ macro_rules! env {
             }
         }
 
+        $crate::env! { @ use_env $var Option<$ty> | $crate::service_util_opt_env($var) }
+
         $($crate::env! { $($tt)* })?
     } };
     (@ $var:ident $ty:ty | $map_fn:path $(, $($tt:tt)*)?) => { $crate::service_util_paste! {
         $crate::service_util_lazy_static! {
-            static ref [<$var _VALUE>]: std::sync::Arc<std::sync::RwLock<Option<Result<$ty, service_util::EnvError>>>> = std::sync::Arc::new(std::sync::RwLock::new(None));
+            static ref [<$var _VALUE>]: std::sync::Arc<std::sync::RwLock<Option<Result<$ty, $crate::EnvError>>>> = std::sync::Arc::new(std::sync::RwLock::new(None));
         }
 
-        pub fn [<$var:lower>]() -> Result<$ty, service_util::EnvError> {
+        pub fn [<$var:lower>]() -> Result<$ty, $crate::EnvError> {
             if [<has_set_ $var:lower>]() {
                 [<$var _VALUE>].read().unwrap().as_ref().unwrap().clone()
             } else {
@@ -100,6 +134,8 @@ macro_rules! env {
                 res
             }
         }
+
+        $crate::env! { @ use_env $var $ty | $crate::service_util_env($var).map($map_fn) }
 
         $($crate::env! { $($tt)* })?
     } };
