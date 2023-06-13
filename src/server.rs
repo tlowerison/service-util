@@ -101,7 +101,7 @@ fn is_content_within_size_range(_body: &hyper::body::Body) -> bool {
             feature = "max-allowed-request-body-size-xxl",
         ))] {
             use hyper::body::HttpBody;
-            body.size_hint().upper().unwrap_or(MAX_ALLOWED_REQUEST_BODY_SIZE + 1) < MAX_ALLOWED_REQUEST_BODY_SIZE
+            _body.size_hint().upper().unwrap_or(MAX_ALLOWED_REQUEST_BODY_SIZE + 1) < MAX_ALLOWED_REQUEST_BODY_SIZE
         } else {
             true
         }
