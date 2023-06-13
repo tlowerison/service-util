@@ -17,17 +17,25 @@ use axum_05::{extract::RawBody, BoxError};
 #[cfg(feature = "axum-06")]
 use axum_06::{extract::RawBody, BoxError};
 
-#[cfg(feature = "max-allowed-request-body-size-small")]
+#[cfg(feature = "max-allowed-request-body-size-sm")]
 #[allow(dead_code)]
 const MAX_ALLOWED_REQUEST_BODY_SIZE: u64 = 102_400; // 100 KB
 
-#[cfg(feature = "max-allowed-request-body-size-medium")]
+#[cfg(feature = "max-allowed-request-body-size-md")]
 #[allow(dead_code)]
 const MAX_ALLOWED_REQUEST_BODY_SIZE: u64 = 1_048_576; // 1 MB
 
-#[cfg(feature = "max-allowed-request-body-size-large")]
+#[cfg(feature = "max-allowed-request-body-size-lg")]
 #[allow(dead_code)]
 const MAX_ALLOWED_REQUEST_BODY_SIZE: u64 = 10_485_760; // 10 MB
+
+#[cfg(feature = "max-allowed-request-body-size-xl")]
+#[allow(dead_code)]
+const MAX_ALLOWED_REQUEST_BODY_SIZE: u64 = 104_857_600; // 100 MB
+
+#[cfg(feature = "max-allowed-request-body-size-xxl")]
+#[allow(dead_code)]
+const MAX_ALLOWED_REQUEST_BODY_SIZE: u64 = 1_073_741_824; // 1 GB
 
 pub static X_FORWARDED_FOR: HeaderName = HeaderName::from_static("x-forwarded-for");
 pub static X_REAL_IP: HeaderName = HeaderName::from_static("x-real-ip");
@@ -83,12 +91,26 @@ pub async fn shutdown_signal() {
     info!("signal received, starting graceful shutdown");
 }
 
+fn is_content_within_size_range(_body: &hyper::body::Body) -> bool {
+    cfg_if! {
+        if #[cfg(any(
+            feature = "max-allowed-request-body-size-sm",
+            feature = "max-allowed-request-body-size-md",
+            feature = "max-allowed-request-body-size-lg",
+            feature = "max-allowed-request-body-size-xl",
+            feature = "max-allowed-request-body-size-xxl",
+        ))] {
+            use hyper::body::HttpBody;
+            body.size_hint().upper().unwrap_or(MAX_ALLOWED_REQUEST_BODY_SIZE + 1) < MAX_ALLOWED_REQUEST_BODY_SIZE
+        } else {
+            true
+        }
+    }
+}
+
 #[cfg(any(feature = "axum-05", feature = "axum-06"))]
 pub async fn from_body<T: serde::de::DeserializeOwned>(RawBody(body): RawBody) -> Result<T, crate::Error> {
-    use hyper::body::HttpBody;
-
-    let content_length = body.size_hint().upper().unwrap_or(MAX_ALLOWED_REQUEST_BODY_SIZE + 1);
-    if content_length < MAX_ALLOWED_REQUEST_BODY_SIZE {
+    if is_content_within_size_range(&body) {
         hyper::body::to_bytes(body)
             .await
             .map_err(|_| crate::Error::bad_request_msg("invalid request body"))
@@ -97,26 +119,47 @@ pub async fn from_body<T: serde::de::DeserializeOwned>(RawBody(body): RawBody) -
                     .map_err(|err| crate::Error::bad_request_msg(format!("could not deserialize body: {err}")))
             })
     } else {
-        Err(crate::Error::bad_request_msg(format!(
-            "request body is too large, maximum allowed size is {MAX_ALLOWED_REQUEST_BODY_SIZE}"
-        )))
+        cfg_if! {
+            if #[cfg(any(
+                feature = "max-allowed-request-body-size-sm",
+                feature = "max-allowed-request-body-size-md",
+                feature = "max-allowed-request-body-size-lg",
+                feature = "max-allowed-request-body-size-xl",
+                feature = "max-allowed-request-body-size-xxl",
+            ))] {
+                return Err(crate::Error::msg(hyper::http::StatusCode::PAYLOAD_TOO_LARGE, format!(
+                    "request body is too large, maximum allowed size is {MAX_ALLOWED_REQUEST_BODY_SIZE}"
+                )));
+            } else {
+                Err(crate::Error::msg(hyper::http::StatusCode::PAYLOAD_TOO_LARGE, "request body is too large".to_string()))
+            }
+        }
     }
 }
 
 #[cfg(any(feature = "axum-05", feature = "axum-06"))]
 pub async fn body_bytes(RawBody(body): RawBody) -> Result<Vec<u8>, crate::Error> {
-    use hyper::body::HttpBody;
-
-    let content_length = body.size_hint().upper().unwrap_or(MAX_ALLOWED_REQUEST_BODY_SIZE + 1);
-    if content_length < MAX_ALLOWED_REQUEST_BODY_SIZE {
+    if is_content_within_size_range(&body) {
         hyper::body::to_bytes(body)
             .await
             .map(|bytes| bytes.to_vec())
             .map_err(|_| crate::Error::bad_request_msg("invalid request body"))
     } else {
-        Err(crate::Error::bad_request_msg(format!(
-            "request body is too large, maximum allowed size is {MAX_ALLOWED_REQUEST_BODY_SIZE}"
-        )))
+        cfg_if! {
+            if #[cfg(any(
+                feature = "max-allowed-request-body-size-sm",
+                feature = "max-allowed-request-body-size-md",
+                feature = "max-allowed-request-body-size-lg",
+                feature = "max-allowed-request-body-size-xl",
+                feature = "max-allowed-request-body-size-xxl",
+            ))] {
+                return Err(crate::Error::msg(hyper::http::StatusCode::PAYLOAD_TOO_LARGE, format!(
+                    "request body is too large, maximum allowed size is {MAX_ALLOWED_REQUEST_BODY_SIZE}"
+                )));
+            } else {
+                Err(crate::Error::msg(hyper::http::StatusCode::PAYLOAD_TOO_LARGE, "request body is too large".to_string()))
+            }
+        }
     }
 }
 
