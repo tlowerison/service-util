@@ -91,6 +91,7 @@ pub async fn shutdown_signal() {
     info!("signal received, starting graceful shutdown");
 }
 
+#[cfg(any(feature = "axum-05", feature = "axum-06"))]
 fn is_content_within_size_range(_body: &hyper::body::Body) -> bool {
     cfg_if! {
         if #[cfg(any(
