@@ -5,7 +5,6 @@ authors = ["Trey Lowerison"]
 edition = "2021"
 
 [dependencies]
-anyhow = "1"
 async-backtrace = "0.2"
 cfg-if = "1"
 derivative = "2"
@@ -16,15 +15,17 @@ paste = "1"
 thiserror = "1"
 tracing = "0"
 
+anyhow = { version = "1", optional = true }
 async-graphql = { version = "4", optional = true }
 async-trait = { version = "0", optional = true }
 axum-core = { version = "0", optional = true }
+color-eyre = { version = "0", optional = true }
 cookie = { version = "0", optional = true }
 concat-string = { version = "1", optional = true }
 data-encoding = { version = "2", optional = true }
 derive_more = { git = "https://github.com/tlowerison/derive_more", optional = true }
 diesel = { version = "2", optional = true }
-diesel-util = { git = "https://github.com/tlowerison/diesel-util", rev = "85e531b", optional = true }
+diesel-util = { git = "https://github.com/tlowerison/diesel-util", rev = "11846d0", default-features = false, optional = true }
 futures = { version = "0", optional = true }
 mongodb = { version = "2", optional = true }
 opentelemetry = { version = "0.18", optional = true }
@@ -51,10 +52,12 @@ axum-05 = { package = "axum", version = "0.5", default-features = false, feature
 axum-06 = { package = "axum", version = "0.6", default-features = false, features = ["headers"], optional = true }
 
 [features]
-default = ["http1"]
+default = ["anyhow", "http1"]
+anyhow = ["dep:anyhow", "diesel-util/anyhow"]
 axum-05 = ["dep:axum-05", "session-util/axum-core-02"]
 axum-06 = ["dep:axum-06", "session-util/axum-core-03"]
 client = ["async-trait", "concat-string", "futures", "hyper/client", "serde", "serde_json", "serde_qs", "trace"]
+color-eyre = ["dep:color-eyre", "diesel-util/color-eyre"]
 db = ["diesel", "diesel-util", "serde"]
 graphql = ["async-graphql", "diesel", "diesel-util", "serde"]
 grpc = ["tonic"]

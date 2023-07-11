@@ -1,7 +1,8 @@
-use crate::env::EnvError;
+use crate::{env::EnvError, InternalError};
 use async_backtrace::{backtrace, Location};
 use hyper::StatusCode;
 use std::fmt::{Display, Formatter};
+use std::sync::Arc;
 
 #[cfg(feature = "client")]
 use crate::BaseClientError;
@@ -10,8 +11,10 @@ use crate::BaseClientError;
 #[derivative(Debug)]
 pub struct Error {
     pub status_code: StatusCode,
+    #[derivative(Debug = "ignore")]
     pub msg: Option<String>,
-    pub details: Option<String>,
+    #[derivative(Debug = "ignore")]
+    pub details: Option<Arc<InternalError>>,
     #[derivative(Debug = "ignore")]
     pub backtrace: Option<Box<[Location]>>,
 }
@@ -62,7 +65,7 @@ impl Error {
         Self {
             status_code: status_code.into(),
             msg: msg.into(),
-            details: details.into(),
+            details: details.into().map(InternalError::msg).map(Arc::new),
             backtrace: backtrace(),
         }
     }
@@ -76,7 +79,7 @@ impl Error {
         Self {
             status_code: status_code.into(),
             msg: msg.into(),
-            details: details.into(),
+            details: details.into().map(InternalError::msg).map(Arc::new),
             backtrace: backtrace.into(),
         }
     }
@@ -163,10 +166,15 @@ impl From<EnvError> for Error {
     }
 }
 
-impl From<anyhow::Error> for Error {
+impl From<InternalError> for Error {
     #[framed]
-    fn from(err: anyhow::Error) -> Self {
-        Error::init(StatusCode::INTERNAL_SERVER_ERROR, None, format!("{err}"))
+    fn from(err: InternalError) -> Self {
+        Self {
+            status_code: StatusCode::INTERNAL_SERVER_ERROR,
+            msg: None,
+            details: Some(Arc::new(err)),
+            backtrace: backtrace(),
+        }
     }
 }
 
@@ -288,16 +296,16 @@ mod db {
     #[derivative(Debug)]
     pub enum DbError {
         #[error("db error: application error: {0}")]
-        Application(anyhow::Error, #[derivative(Debug = "ignore")] Option<Box<[Location]>>),
+        Application(InternalError, #[derivative(Debug = "ignore")] Option<Box<[Location]>>),
         #[error("db error: database could not process request: {0}")]
         BadRequest(
             diesel::result::Error,
             #[derivative(Debug = "ignore")] Option<Box<[Location]>>,
         ),
         #[error("db error: bad request: {0}")]
-        CustomBadRequest(anyhow::Error, #[derivative(Debug = "ignore")] Option<Box<[Location]>>),
+        CustomBadRequest(InternalError, #[derivative(Debug = "ignore")] Option<Box<[Location]>>),
         #[error("invalid db state")]
-        InvalidDbState(anyhow::Error, #[derivative(Debug = "ignore")] Option<Box<[Location]>>),
+        InvalidDbState(InternalError, #[derivative(Debug = "ignore")] Option<Box<[Location]>>),
         #[error("db error: network error while communiciating with database: {0}")]
         Network(
             diesel::result::Error,
@@ -322,15 +330,15 @@ mod db {
     impl DbError {
         #[framed]
         pub fn application<M: Debug + Display + Send + Sync + 'static>(msg: M) -> DbError {
-            DbError::Application(anyhow::Error::msg(msg), backtrace())
+            DbError::Application(InternalError::msg(msg), backtrace())
         }
         #[framed]
         pub fn bad_request<M: Debug + Display + Send + Sync + 'static>(msg: M) -> DbError {
-            DbError::CustomBadRequest(anyhow::Error::msg(msg), backtrace())
+            DbError::CustomBadRequest(InternalError::msg(msg), backtrace())
         }
         #[framed]
         pub fn invalid_db_state<M: Debug + Display + Send + Sync + 'static>(msg: M) -> DbError {
-            DbError::InvalidDbState(anyhow::Error::msg(msg), backtrace())
+            DbError::InvalidDbState(InternalError::msg(msg), backtrace())
         }
     }
 
@@ -438,7 +446,7 @@ mod db {
         #[framed]
         fn from(err: Error) -> Self {
             Self {
-                source: anyhow::Error::msg(err),
+                source: InternalError::msg(err),
                 backtrace: backtrace(),
             }
         }

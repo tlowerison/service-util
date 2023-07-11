@@ -1,3 +1,4 @@
+use crate::InternalError;
 use hyper::header::HeaderName;
 use hyper::Request;
 use opentelemetry::propagation::TextMapPropagator;
@@ -27,7 +28,7 @@ macro_rules! instrument_field {
 pub static TRACEPARENT: HeaderName = HeaderName::from_static("traceparent");
 pub static TRACESTATE: HeaderName = HeaderName::from_static("tracestate");
 
-pub fn install_tracing(should_enable_telemetry: bool) -> Result<(), anyhow::Error> {
+pub fn install_tracing(should_enable_telemetry: bool) -> Result<(), InternalError> {
     LogTracer::init()?;
     info!("log tracing registry initialized");
 
@@ -58,7 +59,7 @@ pub fn teardown_tracing() {
 
 // suggestion: add the environment variable OTEL_PROPAGATORS=tracecontext
 // propagate your trace ids if using service_util::TraceId in your server stack
-fn install_jaeger_enabled_tracing() -> Result<(), anyhow::Error> {
+fn install_jaeger_enabled_tracing() -> Result<(), InternalError> {
     let tracer = opentelemetry_jaeger::new_agent_pipeline()
         .with_endpoint("localhost:6831")
         .with_max_packet_size(9_216)
