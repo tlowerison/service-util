@@ -14,7 +14,9 @@ authors = ["Trey Lowerison"]
 [workspace.dependencies]
 anyhow = "1"
 async-backtrace = "0.2"
-async-graphql = "4"
+async-graphql-4 = { package = "async-graphql", version = "4" }
+async-graphql-5 = { package = "async-graphql", version = "5" }
+async-graphql-6 = { package = "async-graphql", version = "6" }
 async-trait = "0"
 axum-05 = { package = "axum", version = "0.5", default-features = false, features = ["headers"] }
 axum-06 = { package = "axum", version = "0.6", default-features = false, features = ["headers"] }
@@ -28,7 +30,7 @@ data-encoding = "2"
 derivative = "2"
 derive_more = { git = "https://github.com/tlowerison/derive_more" }
 diesel = "2"
-diesel-util = { git = "https://github.com/tlowerison/diesel-util", rev = "11846d0", default-features = false }
+diesel-util = { git = "https://github.com/tlowerison/diesel-util", rev = "bb29087", default-features = false }
 futures = "0"
 hyper = "0"
 itertools = "^0.10"

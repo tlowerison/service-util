@@ -16,7 +16,6 @@ thiserror.workspace = true
 tracing.workspace = true
 
 anyhow = { workspace = true, optional = true }
-async-graphql = { workspace = true, optional = true }
 async-trait = { workspace = true, optional = true }
 axum-05 = { workspace = true, optional = true }
 axum-06 = { workspace = true, optional = true }
@@ -50,15 +49,21 @@ tracing-subscriber = { workspace = true, optional = true }
 tracing-tree = { workspace = true, optional = true }
 uuid = { workspace = true, optional = true }
 
+async-graphql-4 = { workspace = true, optional = true }
+async-graphql-5 = { workspace = true, optional = true }
+async-graphql-6 = { workspace = true, optional = true }
+
 [features]
 default = ["anyhow", "http1"]
 anyhow = ["dep:anyhow", "diesel-util/anyhow"]
+async-graphql-4 = ["dep:async-graphql-4", "diesel", "diesel-util", "diesel-util/async-graphql-4", "serde"]
+async-graphql-5 = ["dep:async-graphql-5", "diesel", "diesel-util", "diesel-util/async-graphql-5", "serde"]
+async-graphql-6 = ["dep:async-graphql-6", "diesel", "diesel-util", "diesel-util/async-graphql-6", "serde"]
 axum-05 = ["dep:axum-05", "session-util/axum-core-02"]
 axum-06 = ["dep:axum-06", "session-util/axum-core-03"]
 client = ["async-trait", "concat-string", "futures", "hyper/client", "serde", "serde_json", "serde_qs", "trace"]
 color-eyre = ["dep:color-eyre", "diesel-util/color-eyre"]
 db = ["diesel", "diesel-util", "serde"]
-graphql = ["async-graphql", "diesel", "diesel-util", "serde"]
 grpc = ["tonic"]
 http1 = ["hyper/http1"]
 http2 = ["hyper/http2"]

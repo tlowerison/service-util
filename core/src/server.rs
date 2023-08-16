@@ -11,6 +11,13 @@ use tower_http::request_id::MakeRequestId;
 use tracing::{info, Span};
 use uuid::Uuid;
 
+#[cfg(feature = "async-graphql-4")]
+use async_graphql_4 as async_graphql;
+#[cfg(feature = "async-graphql-5")]
+use async_graphql_5 as async_graphql;
+#[cfg(feature = "async-graphql-6")]
+use async_graphql_6 as async_graphql;
+
 #[cfg(feature = "axum-05")]
 use axum_05::{extract::RawBody, BoxError};
 
@@ -164,13 +171,21 @@ pub async fn body_bytes(RawBody(body): RawBody) -> Result<Vec<u8>, crate::Error>
     }
 }
 
-#[cfg(feature = "graphql")]
+#[cfg(any(
+    feature = "async-graphql-4",
+    feature = "async-graphql-5",
+    feature = "async-graphql-6"
+))]
 pub fn missing_session<E>(_: E) -> async_graphql::Error {
     use async_graphql::ErrorExtensions;
     async_graphql::Error::new("no active session").extend_with(|_, extensions| extensions.set("status", 400))
 }
 
-#[cfg(feature = "graphql")]
+#[cfg(any(
+    feature = "async-graphql-4",
+    feature = "async-graphql-5",
+    feature = "async-graphql-6"
+))]
 pub fn missing_data<E>(_: E) -> async_graphql::Error {
     use async_graphql::ErrorExtensions;
     async_graphql::Error::new("Internal Server Error").extend_with(|_, extensions| extensions.set("status", 500))

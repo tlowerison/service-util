@@ -4,6 +4,13 @@ use hyper::StatusCode;
 use std::fmt::{Display, Formatter};
 use std::sync::Arc;
 
+#[cfg(feature = "async-graphql-4")]
+use async_graphql_4 as async_graphql;
+#[cfg(feature = "async-graphql-5")]
+use async_graphql_5 as async_graphql;
+#[cfg(feature = "async-graphql-6")]
+use async_graphql_6 as async_graphql;
+
 #[cfg(feature = "client")]
 use crate::BaseClientError;
 
@@ -139,7 +146,11 @@ impl Error {
         Error::init(StatusCode::BAD_REQUEST, None, format!("{err}"))
     }
 
-    #[cfg(feature = "graphql")]
+    #[cfg(any(
+        feature = "async-graphql-4",
+        feature = "async-graphql-5",
+        feature = "async-graphql-6"
+    ))]
     pub fn graphql(self) -> async_graphql::Error {
         use async_graphql::ErrorExtensions;
         async_graphql::Error::new(self.msg.map(std::borrow::Cow::from).unwrap_or_else(|| {
