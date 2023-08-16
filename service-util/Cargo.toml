@@ -1,0 +1,30 @@
+[package]
+name = "service-util"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+[dependencies]
+core = { package = "service-util-core", path = "../core", default-features = false }
+proc-macros = { package = "service-util-proc-macros", path = "../proc-macros", default-features = false }
+
+[features]
+default = ["anyhow", "http1"]
+anyhow = ["core/anyhow"]
+axum-05 = ["core/axum-05"]
+axum-06 = ["core/axum-06"]
+client = ["core/client"]
+color-eyre = ["core/color-eyre"]
+db = ["core/db"]
+graphql = ["core/graphql"]
+grpc = ["core/grpc"]
+http1 = ["core/http1"]
+http2 = ["core/http2"]
+log_error = ["core/log_error"]
+max-allowed-request-body-size-lg = ["core/max-allowed-request-body-size-lg"]
+max-allowed-request-body-size-md = ["core/max-allowed-request-body-size-md"]
+max-allowed-request-body-size-sm = ["core/max-allowed-request-body-size-sm"]
+max-allowed-request-body-size-xl = ["core/max-allowed-request-body-size-xl"]
+max-allowed-request-body-size-xxl = ["core/max-allowed-request-body-size-xxl"]
+server = ["core/server"]
+trace = ["core/trace"]

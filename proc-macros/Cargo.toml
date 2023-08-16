@@ -1,0 +1,13 @@
+[package]
+name = "service-util-proc-macros"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+[dependencies]
+core = { path = "core", package = "service-util-proc-macros-core" }
+proc-macro2.workspace = true
+syn.workspace = true
+
+[lib]
+proc-macro = true
