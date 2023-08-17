@@ -40,6 +40,7 @@ mongodb = "2"
 opentelemetry = "0.18"
 opentelemetry-jaeger = "0.17"
 paste = "1"
+pin-project-lite = "0"
 proc-macro2 = "1"
 proc-macro-util = { git = "https://github.com/tlowerison/proc-macro-util", rev = "a06c7e4" }
 quote = "1"

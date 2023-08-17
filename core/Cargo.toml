@@ -12,6 +12,7 @@ hyper.workspace = true
 lazy_static.workspace = true
 log.workspace = true
 paste.workspace = true
+pin-project-lite.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 
