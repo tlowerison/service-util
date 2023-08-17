@@ -21,6 +21,7 @@ async-trait = { workspace = true, optional = true }
 axum-05 = { workspace = true, optional = true }
 axum-06 = { workspace = true, optional = true }
 axum-core = { workspace = true, optional = true }
+chrono = { workspace = true, optional = true }
 color-eyre = { workspace = true, optional = true }
 cookie = { workspace = true, optional = true }
 concat-string = { workspace = true, optional = true }
@@ -75,4 +76,4 @@ max-allowed-request-body-size-sm = []
 max-allowed-request-body-size-xl = []
 max-allowed-request-body-size-xxl = []
 server = ["derive_more", "futures", "opentelemetry/rt-tokio", "serde", "serde_json", "session-util", "tokio", "tokio/macros", "tower", "tower/timeout", "trace", "uuid"]
-trace = ["opentelemetry", "opentelemetry-jaeger/rt-tokio", "tower-http", "tracing-error", "tracing-log", "tracing-opentelemetry", "tracing-subscriber", "tracing-tree", "uuid"]
+trace = ["chrono", "opentelemetry", "opentelemetry-jaeger/rt-tokio", "tower-http", "tracing-error", "tracing-log", "tracing-opentelemetry", "tracing-subscriber", "tracing-tree", "uuid"]

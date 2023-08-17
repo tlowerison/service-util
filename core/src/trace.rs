@@ -1,4 +1,5 @@
 use crate::InternalError;
+use chrono::Utc;
 use hyper::header::HeaderName;
 use hyper::Request;
 use opentelemetry::propagation::TextMapPropagator;
@@ -13,7 +14,7 @@ use tracing_error::ErrorLayer;
 use tracing_log::LogTracer;
 use tracing_opentelemetry::{OpenTelemetryLayer, OpenTelemetrySpanExt};
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
-use tracing_tree::HierarchicalLayer;
+use tracing_tree::{time::FormatTime, HierarchicalLayer};
 
 #[macro_export]
 macro_rules! instrument_field {
@@ -28,24 +29,34 @@ macro_rules! instrument_field {
 pub static TRACEPARENT: HeaderName = HeaderName::from_static("traceparent");
 pub static TRACESTATE: HeaderName = HeaderName::from_static("tracestate");
 
-pub fn install_tracing(should_enable_telemetry: bool) -> Result<(), InternalError> {
+pub fn install_tracing(
+    should_enable_telemetry: bool,
+    hierarchical_layer: impl Into<Option<HierarchicalLayer>>,
+) -> Result<(), InternalError> {
     LogTracer::init()?;
     info!("log tracing registry initialized");
 
     if should_enable_telemetry {
         install_jaeger_enabled_tracing()?;
     } else {
-        let registry = Registry::default()
-            .with(EnvFilter::from_default_env())
-            .with(
-                HierarchicalLayer::new(2)
-                    .with_bracketed_fields(true)
-                    .with_indent_lines(true)
-                    .with_targets(true),
-            )
-            .with(ErrorLayer::default());
-
-        tracing::subscriber::set_global_default(registry).expect("failed to set tracing subscriber");
+        let registry = Registry::default().with(EnvFilter::from_default_env());
+        match hierarchical_layer.into() {
+            Some(hierarchical_layer) => {
+                tracing::subscriber::set_global_default(registry.with(hierarchical_layer).with(ErrorLayer::default()))
+            }
+            None => tracing::subscriber::set_global_default(
+                registry
+                    .with(
+                        HierarchicalLayer::new(2)
+                            .with_bracketed_fields(true)
+                            .with_indent_lines(true)
+                            .with_timer(UTCTime)
+                            .with_targets(true),
+                    )
+                    .with(ErrorLayer::default()),
+            ),
+        }
+        .expect("failed to set tracing subscriber");
     }
 
     info!("set global default tracing subscriber");
@@ -124,4 +135,13 @@ pub fn traceparent() -> Option<String> {
     let span_id = span_context.span_id();
     let flags = span_context.trace_flags().to_u8();
     Some(format!("00-{trace_id}-{span_id}-{flags:02x}"))
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct UTCTime;
+
+impl FormatTime for UTCTime {
+    fn format_time(&self, w: &mut impl std::fmt::Write) -> std::fmt::Result {
+        write!(w, "{}", Utc::now().naive_utc().format("%+"))
+    }
 }
