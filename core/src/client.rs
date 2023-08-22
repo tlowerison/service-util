@@ -13,6 +13,8 @@ use serde::{
 use std::fmt::{Debug, Display};
 use std::{borrow::Cow, ops::Deref};
 use thiserror::Error;
+
+#[cfg(feature = "tracing")]
 use tracing::instrument;
 
 lazy_static! {
@@ -393,7 +395,7 @@ where
     E::Response<T>: DeserializeOwned + UnwrapResponse<T>,
 {
     #[framed]
-    #[instrument(err(Debug))]
+    #[cfg_attr(feature = "tracing", instrument(err(Debug)))]
     async fn query(&self, client: &C) -> Result<T, C::Error> {
         let uri = self.uri(client)?;
         let headers = self.headers();
@@ -441,7 +443,7 @@ where
     E::Response<T>: DeserializeOwned + UnwrapResponse<T>,
 {
     #[framed]
-    #[instrument(err(Debug))]
+    #[cfg_attr(feature = "tracing", instrument(err(Debug)))]
     async fn query(&self, client: &C) -> Result<Option<T>, C::Error> {
         let uri = self.uri(client)?;
         let headers = self.headers();
@@ -490,7 +492,7 @@ where
     C: Client + Debug + Sync,
 {
     #[framed]
-    #[instrument(err(Debug))]
+    #[cfg_attr(feature = "tracing", instrument(err(Debug)))]
     async fn query(&self, client: &C) -> Result<(), C::Error> {
         let uri = self.uri(client)?;
         let headers = self.headers();
@@ -525,7 +527,7 @@ where
     C: Client + Debug + Sync,
 {
     #[framed]
-    #[instrument(err(Debug))]
+    #[cfg_attr(feature = "tracing", instrument(err(Debug)))]
     async fn query(&self, client: &C) -> Result<Response<Vec<u8>>, C::Error> {
         let uri = self.uri(client)?;
         let headers = self.headers();
@@ -595,7 +597,7 @@ where
     E::Response<Vec<T>>: DeserializeOwned + UnwrapResponse<Vec<T>>,
 {
     #[framed]
-    #[instrument(err(Debug))]
+    #[cfg_attr(feature = "tracing", instrument(err(Debug)))]
     async fn query(&self, client: &C) -> Result<Vec<T>, C::Error> {
         let (limit, mut all_results): (usize, Vec<T>) = match &self.pagination {
             Pagination::All => (usize::MAX, vec![]),
@@ -703,7 +705,7 @@ where
     C: Client + Debug + Sync,
 {
     #[framed]
-    #[instrument(err(Debug))]
+    #[cfg_attr(feature = "tracing", instrument(err(Debug)))]
     async fn query(&self, client: &C) -> Result<(), C::Error> {
         let uri = self.uri(client)?;
         let headers = self.headers();
@@ -731,7 +733,7 @@ where
     C: Client + Debug + Sync,
 {
     #[framed]
-    #[instrument(err(Debug))]
+    #[cfg_attr(feature = "tracing", instrument(err(Debug)))]
     async fn query(&self, client: &C) -> Result<(), C::Error> {
         let uri = self.uri(client)?;
         let headers = self.headers();

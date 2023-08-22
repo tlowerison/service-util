@@ -50,7 +50,7 @@ repos:
         - --fix
         - --allow-dirty
         - --allow-staged
-        - --features=async-graphql-4,axum-05,client,db,grpc,http1,http2,log_error,server,trace
+        - --features=async-graphql-4,axum-05,client,db,grpc,http1,http2,log_error,server,tracing
         language: system
         types: [rust]
         always_run: true
@@ -67,7 +67,7 @@ repos:
         - --fix
         - --allow-dirty
         - --allow-staged
-        - --features=async-graphql-5,axum-06,client,db,grpc,http1,http2,log_error,server,trace
+        - --features=async-graphql-5,axum-06,client,db,grpc,http1,http2,log_error,server,tracing
         language: system
         types: [rust]
         always_run: true
@@ -81,7 +81,7 @@ repos:
         args:
         - clippy
         - --verbose
-        - --features=async-graphql-6,axum-05,client,db,grpc,http1,http2,log_error,server,trace
+        - --features=async-graphql-6,axum-05,client,db,grpc,http1,http2,log_error,server,tracing
         language: system
         types: [rust]
         always_run: true
@@ -95,7 +95,7 @@ repos:
         args:
         - clippy
         - --verbose
-        - --features=async-graphql-4,axum-06,client,db,grpc,http1,http2,log_error,server,trace
+        - --features=async-graphql-4,axum-06,client,db,grpc,http1,http2,log_error,server,tracing
         language: system
         types: [rust]
         always_run: true

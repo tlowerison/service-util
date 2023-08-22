@@ -14,7 +14,6 @@ log.workspace = true
 paste.workspace = true
 pin-project-lite.workspace = true
 thiserror.workspace = true
-tracing.workspace = true
 
 anyhow = { workspace = true, optional = true }
 async-trait = { workspace = true, optional = true }
@@ -44,6 +43,7 @@ tower = { workspace = true, optional = true }
 tower-http = { workspace = true, optional = true }
 tower-layer = { workspace = true, optional = true }
 tower-service = { workspace = true, optional = true }
+tracing = { workspace = true, optional = true }
 tracing-error = { workspace = true, optional = true }
 tracing-log = { workspace = true, optional = true }
 tracing-opentelemetry = { workspace = true, optional = true }
@@ -63,7 +63,7 @@ async-graphql-5 = ["dep:async-graphql-5", "diesel", "diesel-util", "diesel-util/
 async-graphql-6 = ["dep:async-graphql-6", "diesel", "diesel-util", "diesel-util/async-graphql-6", "serde"]
 axum-05 = ["dep:axum-05", "session-util/axum-core-02"]
 axum-06 = ["dep:axum-06", "session-util/axum-core-03"]
-client = ["async-trait", "concat-string", "futures", "hyper/client", "serde", "serde_json", "serde_qs", "trace"]
+client = ["async-trait", "concat-string", "futures", "hyper/client", "serde", "serde_json", "serde_qs", "tracing"]
 color-eyre = ["dep:color-eyre", "diesel-util/color-eyre"]
 db = ["diesel", "diesel-util", "serde"]
 grpc = ["tonic"]
@@ -75,5 +75,5 @@ max-allowed-request-body-size-md = []
 max-allowed-request-body-size-sm = []
 max-allowed-request-body-size-xl = []
 max-allowed-request-body-size-xxl = []
-server = ["derive_more", "futures", "opentelemetry/rt-tokio", "serde", "serde_json", "session-util", "tokio", "tokio/macros", "tower", "tower/timeout", "trace", "uuid"]
-trace = ["chrono", "opentelemetry", "opentelemetry-jaeger/rt-tokio", "tower-http", "tracing-error", "tracing-log", "tracing-opentelemetry", "tracing-subscriber", "tracing-tree", "uuid"]
+server = ["derive_more", "futures", "opentelemetry/rt-tokio", "serde", "serde_json", "session-util", "tokio", "tokio/macros", "tower", "tower/timeout", "tracing", "uuid"]
+tracing = ["dep:tracing", "chrono", "diesel-util/tracing", "opentelemetry", "opentelemetry-jaeger/rt-tokio", "tower-http", "tracing-error", "tracing-log", "tracing-opentelemetry", "tracing-subscriber", "tracing-tree", "uuid"]

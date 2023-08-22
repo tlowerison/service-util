@@ -88,7 +88,7 @@ cfg_if! {
     }
 }
 cfg_if! {
-    if #[cfg(feature = "trace")] {
+    if #[cfg(feature = "tracing")] {
         mod trace;
         pub use trace::*;
     }
