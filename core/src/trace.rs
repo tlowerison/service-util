@@ -142,6 +142,6 @@ pub struct UTCTime;
 
 impl FormatTime for UTCTime {
     fn format_time(&self, w: &mut impl std::fmt::Write) -> std::fmt::Result {
-        write!(w, "{}", Utc::now().naive_utc().format("%+"))
+        write!(w, "{}", Utc::now().format("%+"))
     }
 }
