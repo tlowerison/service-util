@@ -293,115 +293,10 @@ pub use db::*;
 mod db {
     use super::*;
 
-    use async_backtrace::{backtrace, Location};
+    use async_backtrace::backtrace;
     use diesel::result::DatabaseErrorKind;
     use diesel_util::{DbEntityError, TxCleanupError};
-    use std::fmt::{Debug, Display};
-
-    /// DbError is a simplified representation of a diesel Error
-    /// It largely exists to make service code handling db errors
-    /// able to make business decisions without having to handle
-    /// the complexity of potentially every database failure in
-    /// interaction with the database.
-    #[derive(Derivative, thiserror::Error)]
-    #[derivative(Debug)]
-    pub enum DbError {
-        #[error("db error: application error: {0}")]
-        Application(InternalError, #[derivative(Debug = "ignore")] Option<Box<[Location]>>),
-        #[error("db error: database could not process request: {0}")]
-        BadRequest(
-            diesel::result::Error,
-            #[derivative(Debug = "ignore")] Option<Box<[Location]>>,
-        ),
-        #[error("db error: bad request: {0}")]
-        CustomBadRequest(InternalError, #[derivative(Debug = "ignore")] Option<Box<[Location]>>),
-        #[error("invalid db state")]
-        InvalidDbState(InternalError, #[derivative(Debug = "ignore")] Option<Box<[Location]>>),
-        #[error("db error: network error while communiciating with database: {0}")]
-        Network(
-            diesel::result::Error,
-            #[derivative(Debug = "ignore")] Option<Box<[Location]>>,
-        ),
-        #[error("db error: {0}")]
-        Other(
-            diesel::result::Error,
-            #[derivative(Debug = "ignore")] Option<Box<[Location]>>,
-        ),
-        #[error("db error: application performed an invalid db operation: {0}")]
-        Server(
-            diesel::result::Error,
-            #[derivative(Debug = "ignore")] Option<Box<[Location]>>,
-        ),
-        #[error("db error: could not commit transaction, another concurrent has locked affected rows")]
-        Stale(#[derivative(Debug = "ignore")] Option<Box<[Location]>>),
-        #[error("transaction cleanup error: {0}")]
-        TxCleanup(#[from] TxCleanupError),
-    }
-
-    impl DbError {
-        #[framed]
-        pub fn application<M: Debug + Display + Send + Sync + 'static>(msg: M) -> DbError {
-            DbError::Application(InternalError::msg(msg), backtrace())
-        }
-        #[framed]
-        pub fn bad_request<M: Debug + Display + Send + Sync + 'static>(msg: M) -> DbError {
-            DbError::CustomBadRequest(InternalError::msg(msg), backtrace())
-        }
-        #[framed]
-        pub fn invalid_db_state<M: Debug + Display + Send + Sync + 'static>(msg: M) -> DbError {
-            DbError::InvalidDbState(InternalError::msg(msg), backtrace())
-        }
-    }
-
-    impl From<std::convert::Infallible> for DbError {
-        fn from(_: std::convert::Infallible) -> Self {
-            unreachable!()
-        }
-    }
-
-    impl From<diesel::result::Error> for DbError {
-        #[framed]
-        fn from(error: diesel::result::Error) -> Self {
-            match &error {
-                diesel::result::Error::InvalidCString(_) => DbError::BadRequest(error, backtrace()),
-                diesel::result::Error::DatabaseError(kind, _) => match kind {
-                    DatabaseErrorKind::UniqueViolation => DbError::BadRequest(error, backtrace()),
-                    DatabaseErrorKind::ForeignKeyViolation => DbError::BadRequest(error, backtrace()),
-                    DatabaseErrorKind::UnableToSendCommand => DbError::BadRequest(error, backtrace()),
-                    DatabaseErrorKind::ReadOnlyTransaction => DbError::Server(error, backtrace()),
-                    DatabaseErrorKind::NotNullViolation => DbError::BadRequest(error, backtrace()),
-                    DatabaseErrorKind::CheckViolation => DbError::BadRequest(error, backtrace()),
-                    DatabaseErrorKind::ClosedConnection => DbError::Network(error, backtrace()),
-                    // assume any other database errors are the result
-                    // of a raised exception implying a bad request
-                    _ => DbError::BadRequest(error, backtrace()),
-                },
-                diesel::result::Error::NotFound => DbError::BadRequest(error, backtrace()),
-                diesel::result::Error::QueryBuilderError(_) => DbError::Server(error, backtrace()),
-                diesel::result::Error::DeserializationError(_) => DbError::Server(error, backtrace()),
-                diesel::result::Error::SerializationError(_) => DbError::Server(error, backtrace()),
-                diesel::result::Error::AlreadyInTransaction => DbError::Server(error, backtrace()),
-                diesel::result::Error::NotInTransaction => DbError::Server(error, backtrace()),
-                _ => DbError::Other(error, backtrace()),
-            }
-        }
-    }
-
-    impl From<DbError> for Option<diesel::result::Error> {
-        fn from(db_error: DbError) -> Self {
-            match db_error {
-                DbError::Application(_, _) => None,
-                DbError::BadRequest(error, _) => Some(error),
-                DbError::CustomBadRequest(_, _) => None,
-                DbError::InvalidDbState(_, _) => None,
-                DbError::Network(error, _) => Some(error),
-                DbError::Other(error, _) => Some(error),
-                DbError::Server(error, _) => Some(error),
-                DbError::Stale(_) => None,
-                DbError::TxCleanup(_) => None,
-            }
-        }
-    }
+    use std::fmt::Display;
 
     impl<E: Display> From<DbEntityError<E>> for Error {
         fn from(value: DbEntityError<E>) -> Self {
@@ -409,35 +304,49 @@ mod db {
         }
     }
 
-    impl From<DbError> for Error {
-        #[framed]
-        fn from(err: DbError) -> Self {
-            let (err, backtrace) = match err {
-                DbError::BadRequest(err, backtrace) => {
-                    return Error::init_with_backtrace(StatusCode::BAD_REQUEST, None, format!("{err}"), backtrace)
-                }
-                DbError::CustomBadRequest(err, backtrace) => {
-                    return Error::init_with_backtrace(StatusCode::BAD_REQUEST, None, format!("{err}"), backtrace)
-                }
-                DbError::Stale(backtrace) => {
-                    return Error::init_with_backtrace(StatusCode::SERVICE_UNAVAILABLE, None, None, backtrace)
-                }
-
-                DbError::Application(err, backtrace) => (format!("{err}"), backtrace),
-                DbError::InvalidDbState(err, backtrace) => (format!("{err}"), backtrace),
-                DbError::Network(err, backtrace) => (format!("{err}"), backtrace),
-                DbError::Other(err, backtrace) => (format!("{err}"), backtrace),
-                DbError::Server(err, backtrace) => (format!("{err}"), backtrace),
-                DbError::TxCleanup(err) => return Self::from(err),
-            };
-            Self::init_with_backtrace(StatusCode::INTERNAL_SERVER_ERROR, None, err, backtrace)
-        }
-    }
-
     impl From<diesel::result::Error> for Error {
         #[framed]
         fn from(err: diesel::result::Error) -> Self {
-            Error::init(StatusCode::INTERNAL_SERVER_ERROR, None, format!("{err}"))
+            match &err {
+                diesel::result::Error::InvalidCString(_) => {
+                    Error::init(StatusCode::BAD_REQUEST, None, format!("{err}"))
+                }
+                diesel::result::Error::DatabaseError(kind, _) => match kind {
+                    DatabaseErrorKind::UniqueViolation => Error::init(StatusCode::BAD_REQUEST, None, format!("{err}")),
+                    DatabaseErrorKind::ForeignKeyViolation => {
+                        Error::init(StatusCode::BAD_REQUEST, None, format!("{err}"))
+                    }
+                    DatabaseErrorKind::UnableToSendCommand => {
+                        Error::init(StatusCode::BAD_REQUEST, None, format!("{err}"))
+                    }
+                    DatabaseErrorKind::ReadOnlyTransaction => {
+                        Error::init(StatusCode::INTERNAL_SERVER_ERROR, None, format!("{err}"))
+                    }
+                    DatabaseErrorKind::NotNullViolation => Error::init(StatusCode::BAD_REQUEST, None, format!("{err}")),
+                    DatabaseErrorKind::CheckViolation => Error::init(StatusCode::BAD_REQUEST, None, format!("{err}")),
+                    DatabaseErrorKind::ClosedConnection => {
+                        Error::init(StatusCode::INTERNAL_SERVER_ERROR, None, format!("{err}"))
+                    }
+                    _ => Error::init(StatusCode::INTERNAL_SERVER_ERROR, None, format!("{err}")),
+                },
+                diesel::result::Error::NotFound => Error::init(StatusCode::BAD_REQUEST, None, format!("{err}")),
+                diesel::result::Error::QueryBuilderError(_) => {
+                    Error::init(StatusCode::INTERNAL_SERVER_ERROR, None, format!("{err}"))
+                }
+                diesel::result::Error::DeserializationError(_) => {
+                    Error::init(StatusCode::INTERNAL_SERVER_ERROR, None, format!("{err}"))
+                }
+                diesel::result::Error::SerializationError(_) => {
+                    Error::init(StatusCode::INTERNAL_SERVER_ERROR, None, format!("{err}"))
+                }
+                diesel::result::Error::AlreadyInTransaction => {
+                    Error::init(StatusCode::INTERNAL_SERVER_ERROR, None, format!("{err}"))
+                }
+                diesel::result::Error::NotInTransaction => {
+                    Error::init(StatusCode::INTERNAL_SERVER_ERROR, None, format!("{err}"))
+                }
+                _ => Error::init(StatusCode::INTERNAL_SERVER_ERROR, None, format!("{err}")),
+            }
         }
     }
 
