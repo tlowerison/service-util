@@ -96,6 +96,14 @@ pub async fn shutdown_signal() {
     }
 
     info!("signal received, starting graceful shutdown");
+
+    cfg_if! {
+        if #[cfg(feature = "tracing")] {
+            info!("shutting down tracer provider");
+            ::opentelemetry::global::shutdown_tracer_provider();
+            info!("successfully shut down tracer provider");
+        }
+    }
 }
 
 #[cfg(any(feature = "axum-05", feature = "axum-06"))]

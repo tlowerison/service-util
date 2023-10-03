@@ -1,20 +1,28 @@
-use crate::InternalError;
-use chrono::Utc;
-use hyper::header::HeaderName;
-use hyper::Request;
-use opentelemetry::propagation::TextMapPropagator;
-use opentelemetry::sdk::{
-    propagation::TraceContextPropagator,
-    trace::{self, Sampler},
-};
-use opentelemetry::trace::TraceContextExt;
-use std::collections::HashMap;
-use tracing::{info, Span};
-use tracing_error::ErrorLayer;
-use tracing_log::LogTracer;
-use tracing_opentelemetry::{OpenTelemetryLayer, OpenTelemetrySpanExt};
-use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
-use tracing_tree::{time::FormatTime, HierarchicalLayer};
+use crate::env;
+use ::chrono::Utc;
+use ::hyper::header::HeaderName;
+use ::hyper::Request;
+use ::opentelemetry::propagation::TextMapPropagator;
+use ::opentelemetry::sdk::propagation::TraceContextPropagator;
+use ::opentelemetry::trace::TraceContextExt;
+use ::serde::*;
+use ::std::collections::HashMap;
+use ::tracing::Span;
+use ::tracing_error::ErrorLayer;
+use ::tracing_log::LogTracer;
+use ::tracing_opentelemetry::{OpenTelemetryLayer, OpenTelemetrySpanExt};
+use ::tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
+use ::tracing_tree::{time::FormatTime, HierarchicalLayer};
+
+#[derive(Clone, Copy, Debug)]
+pub struct UTCTime;
+
+#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum JaegerSinkKind {
+    Agent,
+    Collector,
+}
 
 #[macro_export]
 macro_rules! instrument_field {
@@ -26,82 +34,109 @@ macro_rules! instrument_field {
     };
 }
 
+// macro because typically $registry is a deeply nested type
+// which would have an unknown amount of required type parameters
+// if being accepted as a function argument
+macro_rules! set_global_default {
+    ($registry:expr) => {
+        tracing::subscriber::set_global_default($registry).expect("failed to set subscriber")
+    };
+}
+
 pub static TRACEPARENT: HeaderName = HeaderName::from_static("traceparent");
 pub static TRACESTATE: HeaderName = HeaderName::from_static("tracestate");
 
-pub fn install_tracing(
-    should_enable_telemetry: bool,
-    hierarchical_layer: impl Into<Option<HierarchicalLayer>>,
-) -> Result<(), InternalError> {
-    LogTracer::init()?;
-    info!("log tracing registry initialized");
-
-    if should_enable_telemetry {
-        install_jaeger_enabled_tracing()?;
-    } else {
-        let registry = Registry::default().with(EnvFilter::from_default_env());
-        match hierarchical_layer.into() {
-            Some(hierarchical_layer) => {
-                tracing::subscriber::set_global_default(registry.with(hierarchical_layer).with(ErrorLayer::default()))
-            }
-            None => tracing::subscriber::set_global_default(
-                registry
-                    .with(
-                        HierarchicalLayer::new(2)
-                            .with_bracketed_fields(true)
-                            .with_indent_lines(true)
-                            .with_timer(UTCTime)
-                            .with_targets(true),
-                    )
-                    .with(ErrorLayer::default()),
-            ),
-        }
-        .expect("failed to set tracing subscriber");
-    }
-
-    info!("set global default tracing subscriber");
-
-    Ok(())
+env! {
+    JAEGER_SINK_KIND: JaegerSinkKind = JaegerSinkKind::Collector,
+    LOG_HIERARCHICAL_LAYER_ANSI: Option<bool>,
+    LOG_HIERARCHICAL_LAYER_BRACKETED_FIELDS: bool = true,
+    LOG_HIERARCHICAL_LAYER_INDENT_AMOUNT: usize = 2usize,
+    LOG_HIERARCHICAL_LAYER_INDENT_LINES: bool = true,
+    LOG_HIERARCHICAL_LAYER_TARGETS: bool = true,
+    LOG_HIERARCHICAL_LAYER_THREAD_IDS: bool = false,
+    LOG_HIERARCHICAL_LAYER_THREAD_NAMES: bool = false,
+    LOG_HIERARCHICAL_LAYER_VERBOSE_ENTRY: bool = false,
+    LOG_HIERARCHICAL_LAYER_VERBOSE_EXIT: bool = false,
+    LOG_HIERARCHICAL_LAYER_WRAPAROUND: Option<usize>,
+    OTEL_EVENT_ATTRIBUTE_COUNT_LIMIT: Option<u32>,
+    OTEL_LINK_ATTRIBUTE_COUNT_LIMIT: Option<u32>,
+    TELEMETRY_ENABLED: bool = false,
+    // OpenTelemetry environment variables which are already handled by
+    // the opentelemetry and opentelemetry_jaeger libraries:
+    // - OTEL_EXPORTER_JAEGER_ENDPOINT: defaults to "http://localhost:14250/api/trace"
+    // - OTEL_EXPORTER_JAEGER_USER
+    // - OTEL_EXPORTER_JAEGER_PASSWORD
+    // - OTEL_EXPORTER_JAEGER_TIMEOUT: defaults to 10 seconds
+    // - OTEL_SPAN_ATTRIBUTE_COUNT_LIMIT: defaults to 128
+    // - OTEL_SPAN_EVENT_COUNT_LIMIT: defaults to 128
+    // - OTEL_SPAN_LINK_COUNT_LIMIT: defaults to 128
+    // - OTEL_TRACES_SAMPLER: defaults to "parentbased_always_on"
+    // - OTEL_TRACES_SAMPLER_ARG:
+    // - OTEL_BSP_SCHEDULE_DELAY: defaults to 5 seconds
+    // - OTEL_BSP_MAX_QUEUE_SIZE: defaults to 2048
+    // - OTEL_BSP_MAX_EXPORT_BATCH_SIZE: defaults to 512
+    // - OTEL_BSP_EXPORT_TIMEOUT: defaults to 30 seconds
+    // - OTEL_BSP_MAX_CONCURRENT_EXPORTS: defaults to 1
 }
 
-pub fn teardown_tracing() {
-    opentelemetry::global::shutdown_tracer_provider();
-}
-
-// suggestion: add the environment variable OTEL_PROPAGATORS=tracecontext
-// propagate your trace ids if using service_util::TraceId in your server stack
-fn install_jaeger_enabled_tracing() -> Result<(), InternalError> {
-    let tracer = opentelemetry_jaeger::new_agent_pipeline()
-        .with_endpoint("localhost:6831")
-        .with_max_packet_size(9_216)
-        .with_auto_split_batch(true)
-        .with_instrumentation_library_tags(false)
-        .with_trace_config(
-            trace::config()
-                .with_sampler(Sampler::AlwaysOn)
-                .with_max_events_per_span(512)
-                .with_max_attributes_per_event(16),
-        )
-        .install_batch(opentelemetry::runtime::Tokio)?;
-
-    info!("jaeger tracing registry initialized");
+pub fn install_tracing() {
+    LogTracer::init().expect("unable to initialize LogTracer");
 
     let registry = Registry::default()
         .with(EnvFilter::from_default_env())
-        .with(
-            HierarchicalLayer::new(2)
-                .with_bracketed_fields(true)
-                .with_indent_lines(true)
-                .with_targets(true),
-        )
-        .with(OpenTelemetryLayer::new(tracer))
-        .with(ErrorLayer::default());
+        .with(hierarchical_layer());
 
-    tracing::subscriber::set_global_default(registry).expect("failed to set subscriber");
+    if telemetry_enabled().unwrap() {
+        set_global_default!(registry
+            .with(OpenTelemetryLayer::new(jaeger_tracer()))
+            .with(ErrorLayer::default()));
+    } else {
+        set_global_default!(registry.with(ErrorLayer::default()));
+    }
 
     opentelemetry::global::set_text_map_propagator(TraceContextPropagator::new());
+}
 
-    Ok(())
+fn hierarchical_layer() -> HierarchicalLayer<fn() -> std::io::Stderr, UTCTime> {
+    let mut layer = ::tracing_tree::HierarchicalLayer::new(log_hierarchical_layer_indent_amount().unwrap())
+        .with_bracketed_fields(log_hierarchical_layer_bracketed_fields().unwrap())
+        .with_indent_lines(log_hierarchical_layer_indent_lines().unwrap())
+        .with_targets(log_hierarchical_layer_targets().unwrap())
+        .with_thread_ids(log_hierarchical_layer_thread_ids().unwrap())
+        .with_thread_names(log_hierarchical_layer_thread_names().unwrap())
+        .with_verbose_entry(log_hierarchical_layer_verbose_entry().unwrap())
+        .with_verbose_exit(log_hierarchical_layer_verbose_exit().unwrap())
+        .with_timer(UTCTime);
+
+    if let Some(ansi) = log_hierarchical_layer_ansi().unwrap() {
+        layer = layer.with_ansi(ansi);
+    }
+    if let Some(wraparound) = log_hierarchical_layer_wraparound().unwrap() {
+        layer = layer.with_wraparound(wraparound);
+    }
+    layer
+}
+
+fn jaeger_tracer() -> opentelemetry::sdk::trace::Tracer {
+    let mut config = opentelemetry::sdk::trace::Config::default();
+
+    if let Some(max_attributes) = otel_event_attribute_count_limit().unwrap() {
+        config = config.with_max_attributes_per_event(max_attributes);
+    }
+    if let Some(max_attributes) = otel_link_attribute_count_limit().unwrap() {
+        config = config.with_max_attributes_per_link(max_attributes);
+    }
+
+    match jaeger_sink_kind().unwrap() {
+        JaegerSinkKind::Agent => opentelemetry_jaeger::new_agent_pipeline()
+            .with_trace_config(config)
+            .install_batch(opentelemetry::runtime::Tokio)
+            .expect("unable to install Jaeger Agent pipeline"),
+        JaegerSinkKind::Collector => opentelemetry_jaeger::new_collector_pipeline()
+            .with_trace_config(config)
+            .install_batch(opentelemetry::runtime::Tokio)
+            .expect("unable to install Jaeger Collector pipeline"),
+    }
 }
 
 pub fn set_trace_parent(req: &Request<hyper::Body>, span: Span) -> Span {
@@ -137,11 +172,23 @@ pub fn traceparent() -> Option<String> {
     Some(format!("00-{trace_id}-{span_id}-{flags:02x}"))
 }
 
-#[derive(Clone, Copy, Debug)]
-pub struct UTCTime;
-
 impl FormatTime for UTCTime {
     fn format_time(&self, w: &mut impl std::fmt::Write) -> std::fmt::Result {
         write!(w, "{}", Utc::now().format("%+"))
+    }
+}
+
+impl std::str::FromStr for JaegerSinkKind {
+    type Err = ::anyhow::Error;
+    fn from_str(str: &str) -> Result<Self, ::anyhow::Error> {
+        Ok(match str {
+            "agent" => Self::Agent,
+            "collector" => Self::Collector,
+            _ => {
+                return Err(::anyhow::Error::msg(format!(
+                    "unrecognized JaegerSinkKind variant: {str}"
+                )))
+            }
+        })
     }
 }
