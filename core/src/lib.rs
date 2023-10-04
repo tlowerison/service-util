@@ -32,10 +32,12 @@ extern crate derivative;
 mod env;
 mod error;
 mod future;
+mod traits;
 
 pub use env::*;
 pub use error::*;
 pub use future::*;
+pub use traits::*;
 
 pub use lazy_static::lazy_static as service_util_lazy_static;
 pub use paste::paste as service_util_paste;

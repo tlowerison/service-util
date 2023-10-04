@@ -1,0 +1,8 @@
+[package]
+name = "service-util-examples"
+edition = "2021"
+version = "0.1.0"
+authors = ["Trey Lowerison"]
+
+[dependencies]
+service-util = { path = "../../service-util" }

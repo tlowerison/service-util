@@ -3,6 +3,7 @@ members = [
   "core",
   "service-util",
   "proc-macros",
+  "examples/*",
 ]
 exclude = []
 resolver = "2"
