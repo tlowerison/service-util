@@ -44,7 +44,7 @@ opentelemetry-jaeger = { version = "0.19", features = ["hyper_collector_client"]
 paste = "1"
 pin-project-lite = "0"
 proc-macro2 = "1"
-proc-macro-util = { git = "https://github.com/tlowerison/proc-macro-util", rev = "a06c7e4" }
+proc-macro-util = { git = "https://github.com/tlowerison/proc-macro-util", rev = "b93d2c5" }
 quote = "1"
 ring = "0"
 serde = { version = "1", features = ["derive"] }

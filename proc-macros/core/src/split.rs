@@ -1,4 +1,4 @@
-use itertools::Itertools;
+use itertools::*;
 use proc_macro2::TokenStream;
 use quote::*;
 use syn::parse::Error;
@@ -73,14 +73,36 @@ pub fn derive_split(tokens: TokenStream) -> Result<TokenStream, Error> {
         })
         .collect_vec();
 
+    let lt: syn::Lifetime = parse2(quote!('split))?;
+
     let components_ty = quote!((#(Option<#component_tys>,)*));
+    let ref_components_ty = quote!((#(Option<&#lt #component_tys>,)*));
+    let mut_components_ty = quote!((#(Option<&#lt mut #component_tys>,)*));
 
     let ident = &ast.ident;
     let (impl_generics, type_generics, where_clause) = ast.generics.split_for_impl();
 
+    // ref
+    let mut ref_generics = ast.generics.clone();
+    ref_generics.params.insert(0, parse2(quote!(#lt))?);
+    let (ref_impl_generics, _, _) = ref_generics.split_for_impl();
+
     let tokens = quote!(
         impl #impl_generics ::service_util::Split for #ident #type_generics #where_clause {
             type Components = #components_ty;
+            fn split(self) -> Self::Components {
+                match self { #(#split_variants,)* }
+            }
+        }
+
+        impl #ref_impl_generics ::service_util::Split for &#lt #ident #type_generics #where_clause {
+            type Components = #ref_components_ty;
+            fn split(self) -> Self::Components {
+                match self { #(#split_variants,)* }
+            }
+        }
+        impl #ref_impl_generics ::service_util::Split for &#lt mut #ident #type_generics #where_clause {
+            type Components = #mut_components_ty;
             fn split(self) -> Self::Components {
                 match self { #(#split_variants,)* }
             }
@@ -126,6 +148,28 @@ mod tests {
                 }
             }
 
+            impl<'split> ::service_util::Split for &'split #ty {
+                type Components = (Option<&'split i32>, Option<&'split u32>, Option<&'split u64>, Option<&'split String>,);
+                fn split(self) -> Self::Components {
+                    match self {
+                        Self::A(_0) => (Some(_0), None, None, None,),
+                        Self::B(_0, _1) => (None, Some(_0), Some(_1), None,),
+                        Self::C(_0) => (None, None, None, Some(_0),),
+                    }
+                }
+            }
+
+            impl<'split> ::service_util::Split for &'split mut #ty {
+                type Components = (Option<&'split mut i32>, Option<&'split mut u32>, Option<&'split mut u64>, Option<&'split mut String>,);
+                fn split(self) -> Self::Components {
+                    match self {
+                        Self::A(_0) => (Some(_0), None, None, None,),
+                        Self::B(_0, _1) => (None, Some(_0), Some(_1), None,),
+                        Self::C(_0) => (None, None, None, Some(_0),),
+                    }
+                }
+            }
+
             impl From<#ty> for (Option<i32>, Option<u32>, Option<u64>, Option<String>,) {
                 fn from(value: #ty) -> Self {
                     ::service_util::Split::split(value)
@@ -153,6 +197,28 @@ mod tests {
         let expected = quote!(
             impl ::service_util::Split for #ty {
                 type Components = (Option<i32>, Option<u32>, Option<u64>, Option<String>,);
+                fn split(self) -> Self::Components {
+                    match self {
+                        Self::A { a } => (Some(a), None, None, None,),
+                        Self::B { b, B } => (None, Some(b), Some(B), None,),
+                        Self::C { c } => (None, None, None, Some(c),),
+                    }
+                }
+            }
+
+            impl<'split> ::service_util::Split for &'split #ty {
+                type Components = (Option<&'split i32>, Option<&'split u32>, Option<&'split u64>, Option<&'split String>,);
+                fn split(self) -> Self::Components {
+                    match self {
+                        Self::A { a } => (Some(a), None, None, None,),
+                        Self::B { b, B } => (None, Some(b), Some(B), None,),
+                        Self::C { c } => (None, None, None, Some(c),),
+                    }
+                }
+            }
+
+            impl<'split> ::service_util::Split for &'split mut #ty {
+                type Components = (Option<&'split mut i32>, Option<&'split mut u32>, Option<&'split mut u64>, Option<&'split mut String>,);
                 fn split(self) -> Self::Components {
                     match self {
                         Self::A { a } => (Some(a), None, None, None,),
@@ -191,6 +257,32 @@ mod tests {
         let expected = quote!(
             impl ::service_util::Split for #ty {
                 type Components = (Option<u8>, Option<u16>, Option<u32>, Option<u64>, Option<i8>, Option<i16>,);
+                fn split(self) -> Self::Components {
+                    match self {
+                        Self::A => (None, None, None, None, None, None,),
+                        Self::B(_0) => (Some(_0), None, None, None, None, None,),
+                        Self::C(_0, _1) => (None, Some(_0), Some(_1), None, None, None,),
+                        Self::D { d } => (None, None, None, Some(d), None, None,),
+                        Self::E { e, E } => (None, None, None, None, Some(e), Some(E),),
+                    }
+                }
+            }
+
+            impl<'split> ::service_util::Split for &'split #ty {
+                type Components = (Option<&'split u8>, Option<&'split u16>, Option<&'split u32>, Option<&'split u64>, Option<&'split i8>, Option<&'split i16>,);
+                fn split(self) -> Self::Components {
+                    match self {
+                        Self::A => (None, None, None, None, None, None,),
+                        Self::B(_0) => (Some(_0), None, None, None, None, None,),
+                        Self::C(_0, _1) => (None, Some(_0), Some(_1), None, None, None,),
+                        Self::D { d } => (None, None, None, Some(d), None, None,),
+                        Self::E { e, E } => (None, None, None, None, Some(e), Some(E),),
+                    }
+                }
+            }
+
+            impl<'split> ::service_util::Split for &'split mut #ty {
+                type Components = (Option<&'split mut u8>, Option<&'split mut u16>, Option<&'split mut u32>, Option<&'split mut u64>, Option<&'split mut i8>, Option<&'split mut i16>,);
                 fn split(self) -> Self::Components {
                     match self {
                         Self::A => (None, None, None, None, None, None,),
