@@ -33,7 +33,7 @@ data-encoding = "2"
 derivative = "2"
 derive_more = { git = "https://github.com/tlowerison/derive_more" }
 diesel = "2"
-diesel-util = { git = "https://github.com/tlowerison/diesel-util", rev = "ab0957c", default-features = false }
+diesel-util = { git = "https://github.com/tlowerison/diesel-util", rev = "e454ebf", default-features = false }
 futures = "0"
 hyper = "0"
 itertools = "^0.11"
