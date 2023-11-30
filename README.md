@@ -42,18 +42,18 @@ Supports the following custom environment variables for tracing configuration:
 - `OTEL_LINK_ATTRIBUTE_COUNT_LIMIT: Option<u32>`
 
 Additional environment variables reference which are used by the opentelemetry and opentelemetry_jaeger crates:
-- `OTEL_EXPORTER_JAEGER_ENDPOINT`: defaults to "http://localhost:14250/api/trace"
+- `OTEL_EXPORTER_JAEGER_ENDPOINT` defaults to "http://localhost:14250/api/trace"
 - `OTEL_EXPORTER_JAEGER_USER`
 - `OTEL_EXPORTER_JAEGER_PASSWORD`
-- `OTEL_EXPORTER_JAEGER_TIMEOUT`: defaults to 10 seconds
-- `OTEL_SPAN_ATTRIBUTE_COUNT_LIMIT`: defaults to 128
-- `OTEL_SPAN_EVENT_COUNT_LIMIT`: defaults to 128
-- `OTEL_SPAN_LINK_COUNT_LIMIT`: defaults to 128
-- `OTEL_TRACES_SAMPLER`: defaults to "parentbased_always_on"
+- `OTEL_EXPORTER_JAEGER_TIMEOUT` defaults to 10 seconds
+- `OTEL_SPAN_ATTRIBUTE_COUNT_LIMIT` defaults to 128
+- `OTEL_SPAN_EVENT_COUNT_LIMIT` defaults to 128
+- `OTEL_SPAN_LINK_COUNT_LIMIT` defaults to 128
+- `OTEL_TRACES_SAMPLER` defaults to "parentbased_always_on"
 - `OTEL_TRACES_SAMPLER_ARG`
-- `OTEL_BSP_SCHEDULE_DELAY`: defaults to 5 seconds
-- `OTEL_BSP_MAX_QUEUE_SIZE`: defaults to 2048
-- `OTEL_BSP_MAX_EXPORT_BATCH_SIZE`: defaults to 512
-- `OTEL_BSP_EXPORT_TIMEOUT`: defaults to 30 seconds
-- `OTEL_BSP_MAX_CONCURRENT_EXPORTS`: defaults to 1
+- `OTEL_BSP_SCHEDULE_DELAY` defaults to 5 seconds
+- `OTEL_BSP_MAX_QUEUE_SIZE` defaults to 2048
+- `OTEL_BSP_MAX_EXPORT_BATCH_SIZE` defaults to 512
+- `OTEL_BSP_EXPORT_TIMEOUT` defaults to 30 seconds
+- `OTEL_BSP_MAX_CONCURRENT_EXPORTS` defaults to 1
 
