@@ -11,7 +11,7 @@ use ::tracing::Span;
 use ::tracing_error::ErrorLayer;
 use ::tracing_log::LogTracer;
 use ::tracing_opentelemetry::{OpenTelemetryLayer, OpenTelemetrySpanExt};
-use ::tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
+use ::tracing_subscriber::{filter::targets::Targets, layer::SubscriberExt, EnvFilter, Registry};
 use ::tracing_tree::{time::FormatTime, HierarchicalLayer};
 
 #[derive(Clone, Copy, Debug)]
@@ -58,9 +58,10 @@ env! {
     LOG_HIERARCHICAL_LAYER_VERBOSE_ENTRY: bool = false,
     LOG_HIERARCHICAL_LAYER_VERBOSE_EXIT: bool = false,
     LOG_HIERARCHICAL_LAYER_WRAPAROUND: Option<usize>,
+    LOG_TARGET_FILTERS: Option<String>,
+    OTEL_ENABLED: bool = false,
     OTEL_EVENT_ATTRIBUTE_COUNT_LIMIT: Option<u32>,
     OTEL_LINK_ATTRIBUTE_COUNT_LIMIT: Option<u32>,
-    TELEMETRY_ENABLED: bool = false,
     // OpenTelemetry environment variables which are already handled by
     // the opentelemetry and opentelemetry_jaeger libraries:
     // - OTEL_EXPORTER_JAEGER_ENDPOINT: defaults to "http://localhost:14250/api/trace"
@@ -82,11 +83,17 @@ env! {
 pub fn install_tracing() {
     LogTracer::init().expect("unable to initialize LogTracer");
 
+    let global_targets_filter: Targets = log_target_filters()
+        .unwrap()
+        .map(|x| x.parse().unwrap())
+        .unwrap_or_default();
+
     let registry = Registry::default()
         .with(EnvFilter::from_default_env())
+        .with(global_targets_filter)
         .with(hierarchical_layer());
 
-    if telemetry_enabled().unwrap() {
+    if otel_enabled().unwrap() {
         set_global_default!(registry
             .with(OpenTelemetryLayer::new(jaeger_tracer()))
             .with(ErrorLayer::default()));
