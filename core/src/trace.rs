@@ -58,7 +58,7 @@ env! {
     LOG_HIERARCHICAL_LAYER_VERBOSE_ENTRY: bool = false,
     LOG_HIERARCHICAL_LAYER_VERBOSE_EXIT: bool = false,
     LOG_HIERARCHICAL_LAYER_WRAPAROUND: Option<usize>,
-    LOG_TARGET_FILTERS: Option<String>,
+    LOG_TARGET_FILTERS: Option<Targets>,
     OTEL_ENABLED: bool = false,
     OTEL_EVENT_ATTRIBUTE_COUNT_LIMIT: Option<u32>,
     OTEL_LINK_ATTRIBUTE_COUNT_LIMIT: Option<u32>,
@@ -83,23 +83,29 @@ env! {
 pub fn install_tracing() {
     LogTracer::init().expect("unable to initialize LogTracer");
 
-    let global_targets_filter: Targets = log_target_filters()
-        .unwrap()
-        .map(|x| x.parse().unwrap())
-        .unwrap_or_default();
+    let global_targets_filter = log_target_filters().unwrap();
 
     let registry = Registry::default()
         .with(EnvFilter::from_default_env())
-        .with(global_targets_filter)
         .with(hierarchical_layer());
 
-    if otel_enabled().unwrap() {
-        set_global_default!(registry
-            .with(OpenTelemetryLayer::new(jaeger_tracer()))
-            .with(ErrorLayer::default()));
-    } else {
-        set_global_default!(registry.with(ErrorLayer::default()));
-    }
+    match otel_enabled().unwrap() {
+        false => match global_targets_filter {
+            None => set_global_default!(registry.with(ErrorLayer::default())),
+            Some(filter) => set_global_default!(registry.with(filter).with(ErrorLayer::default())),
+        },
+        true => match global_targets_filter {
+            None => set_global_default!(registry
+                .with(OpenTelemetryLayer::new(jaeger_tracer()))
+                .with(ErrorLayer::default())
+            ),
+            Some(filter) => set_global_default!(registry
+                .with(filter)
+                .with(OpenTelemetryLayer::new(jaeger_tracer()))
+                .with(ErrorLayer::default())
+            ),
+        }
+    };
 
     opentelemetry::global::set_text_map_propagator(TraceContextPropagator::new());
 }
