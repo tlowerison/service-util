@@ -199,6 +199,72 @@ pub fn missing_data<E>(_: E) -> async_graphql::Error {
     async_graphql::Error::new("Internal Server Error").extend_with(|_, extensions| extensions.set("status", 500))
 }
 
+
+pub mod make_span {
+    use super::*;
+
+    pub fn debug(req: &Request<Body>) -> Span {
+        set_trace_parent(
+            req,
+            tracing::debug_span!(
+                target: "",
+                "request",
+                "http.method" = %req.method(),
+                "http.target" = %req.uri(),
+                "http.client_ip" = get_client_ip(req).map(display),
+            ),
+        )
+    }
+    pub fn error(req: &Request<Body>) -> Span {
+        set_trace_parent(
+            req,
+            tracing::error_span!(
+                target: "",
+                "request",
+                "http.method" = %req.method(),
+                "http.target" = %req.uri(),
+                "http.client_ip" = get_client_ip(req).map(display),
+            ),
+        )
+    }
+    pub fn info(req: &Request<Body>) -> Span {
+        set_trace_parent(
+            req,
+            tracing::info_span!(
+                target: "",
+                "request",
+                 "http.method" = %req.method(),
+                "http.target" = %req.uri(),
+                "http.client_ip" = get_client_ip(req).map(display),
+            ),
+        )
+    }
+    pub fn trace(req: &Request<Body>) -> Span {
+        set_trace_parent(
+            req,
+            tracing::trace_span!(
+                target: "",
+                "request",
+                "http.method" = %req.method(),
+                "http.target" = %req.uri(),
+                "http.client_ip" = get_client_ip(req).map(display),
+            ),
+        )
+    }
+    pub fn warn(req: &Request<Body>) -> Span {
+        set_trace_parent(
+            req,
+            tracing::warn_span!(
+                target: "",
+                "request",
+                "http.method" = %req.method(),
+                "http.target" = %req.uri(),
+                "http.client_ip" = get_client_ip(req).map(display),
+            ),
+        )
+    }
+}
+
 pub mod make_account_span {
     use super::*;
 
