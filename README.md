@@ -36,6 +36,7 @@ Supports the following custom environment variables for tracing configuration:
 - `LOG_HIERARCHICAL_LAYER_VERBOSE_ENTRY: bool = false`
 - `LOG_HIERARCHICAL_LAYER_VERBOSE_EXIT: bool = false`
 - `LOG_HIERARCHICAL_LAYER_WRAPAROUND: Option<usize>`
+- `LOG_TARGET_DEFAULT_LEVEL: Option<tracing_subscriber::filter::LevelFilter>`
 - `LOG_TARGET_FILTERS: Option<tracing_subscriber::filter::targets::Targets>`
 - `OTEL_ENABLED: bool = false`
 - `OTEL_EVENT_ATTRIBUTE_COUNT_LIMIT: Option<u32>`

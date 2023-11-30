@@ -11,7 +11,8 @@ use ::tracing::Span;
 use ::tracing_error::ErrorLayer;
 use ::tracing_log::LogTracer;
 use ::tracing_opentelemetry::{OpenTelemetryLayer, OpenTelemetrySpanExt};
-use ::tracing_subscriber::{filter::targets::Targets, layer::SubscriberExt, EnvFilter, Registry};
+use ::tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
+use ::tracing_subscriber::filter::{LevelFilter, targets::Targets};
 use ::tracing_tree::{time::FormatTime, HierarchicalLayer};
 
 #[derive(Clone, Copy, Debug)]
@@ -58,6 +59,7 @@ env! {
     LOG_HIERARCHICAL_LAYER_VERBOSE_ENTRY: bool = false,
     LOG_HIERARCHICAL_LAYER_VERBOSE_EXIT: bool = false,
     LOG_HIERARCHICAL_LAYER_WRAPAROUND: Option<usize>,
+    LOG_TARGET_DEFAULT_LEVEL: Option<LevelFilter>,
     LOG_TARGET_FILTERS: Option<Targets>,
     OTEL_ENABLED: bool = false,
     OTEL_EVENT_ATTRIBUTE_COUNT_LIMIT: Option<u32>,
@@ -83,7 +85,11 @@ env! {
 pub fn install_tracing() {
     LogTracer::init().expect("unable to initialize LogTracer");
 
-    let global_targets_filter = log_target_filters().unwrap();
+    let global_targets_filter = log_target_filters()
+        .unwrap()
+        .map(|x| x.with_default(
+            log_target_default_level().unwrap().unwrap_or(LevelFilter::OFF)
+        ));
 
     let registry = Registry::default()
         .with(EnvFilter::from_default_env())
