@@ -36,12 +36,13 @@ diesel = "2"
 diesel-util = { git = "https://github.com/tlowerison/diesel-util", rev = "e454ebf", default-features = false }
 futures = "0"
 hyper = "0"
-itertools = "^0.11"
+itertools = "0.12"
 lazy_static = "1"
 log = "0"
 mongodb = "2"
-opentelemetry = "0.20"
-opentelemetry-jaeger = { version = "0.19", features = ["hyper_collector_client"] }
+opentelemetry = "0.21"
+opentelemetry-jaeger = { version = "0.20", features = ["hyper_collector_client", "rt-tokio"] }
+opentelemetry_sdk = { version = "0.21", features = ["rt-tokio"] }
 paste = "1"
 pin-project-lite = "0"
 proc-macro2 = "1"
@@ -63,7 +64,7 @@ tower-service = "0"
 tracing = "0"
 tracing-error = "0"
 tracing-log = "0"
-tracing-opentelemetry = "0.21"
+tracing-opentelemetry = "0.22"
 tracing-subscriber = { version = "0", features = ["env-filter"] }
 tracing-tree = "0"
 uuid = { version = "1", features = ["serde", "v4"] }

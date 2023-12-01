@@ -3,16 +3,16 @@ use ::chrono::Utc;
 use ::hyper::header::HeaderName;
 use ::hyper::Request;
 use ::opentelemetry::propagation::TextMapPropagator;
-use ::opentelemetry::sdk::propagation::TraceContextPropagator;
 use ::opentelemetry::trace::TraceContextExt;
+use ::opentelemetry_sdk::propagation::TraceContextPropagator;
 use ::serde::*;
 use ::std::collections::HashMap;
 use ::tracing::Span;
 use ::tracing_error::ErrorLayer;
 use ::tracing_log::LogTracer;
 use ::tracing_opentelemetry::{OpenTelemetryLayer, OpenTelemetrySpanExt};
+use ::tracing_subscriber::filter::{targets::Targets, LevelFilter};
 use ::tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
-use ::tracing_subscriber::filter::{LevelFilter, targets::Targets};
 use ::tracing_tree::{time::FormatTime, HierarchicalLayer};
 
 #[derive(Clone, Copy, Debug)]
@@ -87,9 +87,7 @@ pub fn install_tracing() {
 
     let global_targets_filter = log_target_filters()
         .unwrap()
-        .map(|x| x.with_default(
-            log_target_default_level().unwrap().unwrap_or(LevelFilter::OFF)
-        ));
+        .map(|x| x.with_default(log_target_default_level().unwrap().unwrap_or(LevelFilter::OFF)));
 
     let registry = Registry::default()
         .with(EnvFilter::from_default_env())
@@ -103,14 +101,12 @@ pub fn install_tracing() {
         true => match global_targets_filter {
             None => set_global_default!(registry
                 .with(OpenTelemetryLayer::new(jaeger_tracer()))
-                .with(ErrorLayer::default())
-            ),
+                .with(ErrorLayer::default())),
             Some(filter) => set_global_default!(registry
                 .with(filter)
                 .with(OpenTelemetryLayer::new(jaeger_tracer()))
-                .with(ErrorLayer::default())
-            ),
-        }
+                .with(ErrorLayer::default())),
+        },
     };
 
     opentelemetry::global::set_text_map_propagator(TraceContextPropagator::new());
@@ -136,8 +132,8 @@ fn hierarchical_layer() -> HierarchicalLayer<fn() -> std::io::Stderr, UTCTime> {
     layer
 }
 
-fn jaeger_tracer() -> opentelemetry::sdk::trace::Tracer {
-    let mut config = opentelemetry::sdk::trace::Config::default();
+fn jaeger_tracer() -> opentelemetry_sdk::trace::Tracer {
+    let mut config = opentelemetry_sdk::trace::Config::default();
 
     if let Some(max_attributes) = otel_event_attribute_count_limit().unwrap() {
         config = config.with_max_attributes_per_event(max_attributes);
@@ -149,11 +145,12 @@ fn jaeger_tracer() -> opentelemetry::sdk::trace::Tracer {
     match jaeger_sink_kind().unwrap() {
         JaegerSinkKind::Agent => opentelemetry_jaeger::new_agent_pipeline()
             .with_trace_config(config)
-            .install_batch(opentelemetry::runtime::Tokio)
+            .install_batch(opentelemetry_sdk::runtime::Tokio)
             .expect("unable to install Jaeger Agent pipeline"),
         JaegerSinkKind::Collector => opentelemetry_jaeger::new_collector_pipeline()
             .with_trace_config(config)
-            .install_batch(opentelemetry::runtime::Tokio)
+            .with_hyper()
+            .install_batch(opentelemetry_sdk::runtime::Tokio)
             .expect("unable to install Jaeger Collector pipeline"),
     }
 }

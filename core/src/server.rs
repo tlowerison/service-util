@@ -199,7 +199,6 @@ pub fn missing_data<E>(_: E) -> async_graphql::Error {
     async_graphql::Error::new("Internal Server Error").extend_with(|_, extensions| extensions.set("status", 500))
 }
 
-
 pub mod make_span {
     use super::*;
 

@@ -31,6 +31,7 @@ diesel-util = { workspace = true, optional = true }
 futures = { workspace = true, optional = true }
 mongodb = { workspace = true, optional = true }
 opentelemetry = { workspace = true, optional = true }
+opentelemetry_sdk = { workspace = true, optional = true }
 opentelemetry-jaeger = { workspace = true, optional = true }
 ring = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
@@ -75,5 +76,5 @@ max-allowed-request-body-size-md = []
 max-allowed-request-body-size-sm = []
 max-allowed-request-body-size-xl = []
 max-allowed-request-body-size-xxl = []
-server = ["derive_more", "futures", "opentelemetry/rt-tokio", "serde", "serde_json", "session-util", "tokio", "tokio/macros", "tower", "tower/timeout", "tracing", "uuid"]
-tracing = ["dep:tracing", "chrono", "diesel-util/tracing", "opentelemetry", "opentelemetry-jaeger/rt-tokio", "serde", "tower-http", "tracing-error", "tracing-log", "tracing-opentelemetry", "tracing-subscriber", "tracing-tree", "uuid"]
+server = ["derive_more", "futures", "opentelemetry", "serde", "serde_json", "session-util", "tokio", "tokio/macros", "tower", "tower/timeout", "tracing", "uuid"]
+tracing = ["dep:tracing", "chrono", "diesel-util/tracing", "opentelemetry", "opentelemetry-jaeger", "opentelemetry_sdk", "serde", "tower-http", "tracing-error", "tracing-log", "tracing-opentelemetry", "tracing-subscriber", "tracing-tree", "uuid"]
