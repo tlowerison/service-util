@@ -204,7 +204,7 @@ pub mod make_span {
 
     pub fn debug(req: &Request<Body>) -> Span {
         set_trace_parent(
-            req,
+            req.headers(),
             tracing::debug_span!(
                 target: "",
                 "request",
@@ -216,7 +216,7 @@ pub mod make_span {
     }
     pub fn error(req: &Request<Body>) -> Span {
         set_trace_parent(
-            req,
+            req.headers(),
             tracing::error_span!(
                 target: "",
                 "request",
@@ -228,7 +228,7 @@ pub mod make_span {
     }
     pub fn info(req: &Request<Body>) -> Span {
         set_trace_parent(
-            req,
+            req.headers(),
             tracing::info_span!(
                 target: "",
                 "request",
@@ -240,7 +240,7 @@ pub mod make_span {
     }
     pub fn trace(req: &Request<Body>) -> Span {
         set_trace_parent(
-            req,
+            req.headers(),
             tracing::trace_span!(
                 target: "",
                 "request",
@@ -252,7 +252,7 @@ pub mod make_span {
     }
     pub fn warn(req: &Request<Body>) -> Span {
         set_trace_parent(
-            req,
+            req.headers(),
             tracing::warn_span!(
                 target: "",
                 "request",
@@ -269,7 +269,7 @@ pub mod make_account_span {
 
     pub fn debug<AccountId: Display + Send + Sync + 'static>(req: &Request<Body>) -> Span {
         set_trace_parent(
-            req,
+            req.headers(),
             tracing::debug_span!(
                 target: "",
                 "request",
@@ -282,7 +282,7 @@ pub mod make_account_span {
     }
     pub fn error<AccountId: Display + Send + Sync + 'static>(req: &Request<Body>) -> Span {
         set_trace_parent(
-            req,
+            req.headers(),
             tracing::error_span!(
                 target: "",
                 "request",
@@ -295,7 +295,7 @@ pub mod make_account_span {
     }
     pub fn info<AccountId: Display + Send + Sync + 'static>(req: &Request<Body>) -> Span {
         set_trace_parent(
-            req,
+            req.headers(),
             tracing::info_span!(
                 target: "",
                 "request",
@@ -308,7 +308,7 @@ pub mod make_account_span {
     }
     pub fn trace<AccountId: Display + Send + Sync + 'static>(req: &Request<Body>) -> Span {
         set_trace_parent(
-            req,
+            req.headers(),
             tracing::trace_span!(
                 target: "",
                 "request",
@@ -321,7 +321,7 @@ pub mod make_account_span {
     }
     pub fn warn<AccountId: Display + Send + Sync + 'static>(req: &Request<Body>) -> Span {
         set_trace_parent(
-            req,
+            req.headers(),
             tracing::warn_span!(
                 target: "",
                 "request",

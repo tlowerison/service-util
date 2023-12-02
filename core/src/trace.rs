@@ -1,7 +1,6 @@
 use crate::env;
 use ::chrono::Utc;
-use ::hyper::header::HeaderName;
-use ::hyper::Request;
+use ::hyper::header::{HeaderMap, HeaderName};
 use ::opentelemetry::propagation::TextMapPropagator;
 use ::opentelemetry::trace::TraceContextExt;
 use ::opentelemetry_sdk::propagation::TraceContextPropagator;
@@ -155,21 +154,21 @@ fn jaeger_tracer() -> opentelemetry_sdk::trace::Tracer {
     }
 }
 
-pub fn set_trace_parent(req: &Request<hyper::Body>, span: Span) -> Span {
+pub fn set_trace_parent(headers: &HeaderMap, span: Span) -> Span {
     let propagator = TraceContextPropagator::new();
-    if let Some(traceparent) = req.headers().get(&TRACEPARENT).and_then(|x| x.to_str().ok()) {
+    if let Some(traceparent) = headers.get(&TRACEPARENT).and_then(|x| x.to_str().ok()) {
         // Propagator::extract only works with HashMap<String, String>
-        let mut headers = match req.headers().get(&TRACESTATE).and_then(|x| x.to_str().ok()) {
+        let mut propagated_headers = match headers.get(&TRACESTATE).and_then(|x| x.to_str().ok()) {
             Some(tracestate) => {
-                let mut headers = HashMap::with_capacity(2);
-                headers.insert("tracestate".to_string(), tracestate.to_string());
-                headers
+                let mut propagated_headers = HashMap::with_capacity(2);
+                propagated_headers.insert("tracestate".to_string(), tracestate.to_string());
+                propagated_headers
             }
             None => HashMap::with_capacity(1),
         };
-        headers.insert("traceparent".to_string(), traceparent.to_string());
+        propagated_headers.insert("traceparent".to_string(), traceparent.to_string());
 
-        let context = propagator.extract(&headers);
+        let context = propagator.extract(&propagated_headers);
         span.set_parent(context);
     }
     span
